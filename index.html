@@ -524,12 +524,15 @@ select.pill:hover,select.tag:hover{filter:brightness(1.15)}
 /* ===================== CONFIGURACAO ===================== */
 /* Passo 1 do GUIA.md: cole aqui a URL e a chave pública (publishable/anon) do seu projeto Supabase.
    Enquanto a URL não começar com https://, o site roda em MODO DEMONSTRAÇÃO, com dados fictícios e sem banco. */
-const SUPABASE_URL = 'COLE_AQUI_A_URL_DO_PROJETO';      // ex.: https://abcdefghijkl.supabase.co
-const SUPABASE_KEY = 'COLE_AQUI_A_PUBLISHABLE_KEY';     // Project Settings → API Keys → publishable (ou anon)
+const SUPABASE_URL = 'https://rhrercmgrfipcdpdvvga.supabase.co';      // ex.: https://abcdefghijkl.supabase.co
+const SUPABASE_KEY = 'sb_publishable_07rPYEE_JZCnSkm_JQCpXA_0Lc8YLUK';     // Project Settings → API Keys → publishable (ou anon)
 const APP_TITLE = 'REX - Center of Excellence';
 const BANNER_URL = 'banner.jpg';                        // imagem do banner (arquivo ao lado do index.html)
 const NOTIFY_API = '/api/seatalk';                      // função serverless da Vercel que fala com o SeaTalk
-const DEMO = !/^https:\/\//.test(SUPABASE_URL);        // true = dados fictícios, nada é salvo
+const CONFIGURED = /^https:\/\/[^/\s]+/.test(SUPABASE_URL) && !!SUPABASE_KEY && !/COLE_AQUI/.test(SUPABASE_KEY);
+/* Modo demonstração (dados fictícios, sem login) só quando o arquivo é aberto direto do computador
+   ou com ?demo=1 na URL. Publicado na Vercel sem chaves, o site mostra um aviso de configuração. */
+const DEMO = !CONFIGURED && (location.protocol === 'file:' || /[?&]demo=1\b/.test(location.search));
 
 /* ===================== CONSTANTES ===================== */
 const STATUS = [
@@ -775,9 +778,27 @@ function mockClient(){
 }
 
 /* Cliente real (Supabase) ou simulado (demonstração) */
+function setupScreen(title, lines){
+  document.body.innerHTML = `<div class="auth-card" style="margin-top:80px"><h1>${title}</h1>${lines.map(l => `<p class="muted" style="margin:10px 0">${l}</p>`).join('')}</div>`;
+}
 const sb = DEMO ? mockClient() : (() => {
-  if(!window.supabase){ document.body.innerHTML = '<p style="padding:40px;font-family:sans-serif">Não foi possível carregar a biblioteca do Supabase. Verifique sua conexão e recarregue a página.</p>'; throw new Error('supabase-js não carregou'); }
-  return window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  if(!CONFIGURED){
+    const falta = [];
+    if(!/^https:\/\/[^/\s]+/.test(SUPABASE_URL)) falta.push('<code>SUPABASE_URL</code> (deve começar com https://)');
+    if(!SUPABASE_KEY || /COLE_AQUI/.test(SUPABASE_KEY)) falta.push('<code>SUPABASE_KEY</code> (chave publishable/anon)');
+    setupScreen('Falta configurar o Supabase', [
+      'Este site foi publicado sem as chaves do projeto. Preencha no <b>index.html</b>, perto da linha 527: ' + falta.join(' e ') + '.',
+      'Depois salve, suba o arquivo de novo no GitHub, aguarde o deploy da Vercel e recarregue esta página (Ctrl+F5).',
+      'As variáveis de ambiente da Vercel servem só para a função /api/seatalk; a tela lê as chaves do próprio index.html.',
+      'Para ver a demonstração com dados fictícios, abra o index.html direto do computador ou use <code>?demo=1</code> no endereço.'
+    ]);
+    throw new Error('Supabase não configurado');
+  }
+  if(!window.supabase){
+    setupScreen('Não foi possível carregar o Supabase', ['A biblioteca do Supabase (cdn.jsdelivr.net) não carregou. Verifique a conexão ou se a rede da empresa bloqueia esse endereço e recarregue a página.']);
+    throw new Error('supabase-js não carregou');
+  }
+  return window.supabase.createClient(SUPABASE_URL.replace(/\/+$/, ''), SUPABASE_KEY.trim());
 })();
 
 
