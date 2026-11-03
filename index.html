@@ -500,6 +500,12 @@ select.pill:hover,select.tag:hover{filter:brightness(1.15)}
 .h3-row{display:flex;align-items:center;gap:10px;margin:0 0 8px}
 .h3-row h3{margin:0}
 
+/* ===== login ===== */
+.gbtn{width:100%;justify-content:center;height:38px;gap:9px}
+.gbtn:disabled{opacity:.7;cursor:default}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;margin:16px 0 14px}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}
+
 /* ===== micro-interacoes gerais ===== */
 .btn{position:relative;overflow:hidden}
 .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s ease-out forwards;pointer-events:none}
@@ -529,6 +535,10 @@ const SUPABASE_KEY = 'sb_publishable_07rPYEE_JZCnSkm_JQCpXA_0Lc8YLUK';     // Pr
 const APP_TITLE = 'REX - Center of Excellence';
 const BANNER_URL = 'banner.jpg';                        // imagem do banner (arquivo ao lado do index.html)
 const NOTIFY_API = '/api/seatalk';                      // função serverless da Vercel que fala com o SeaTalk
+/* Formas de entrar no REX (a lista de quem pode entrar continua sendo a tabela profiles).
+   google: exige o provedor Google ligado no Supabase (GUIA.md, passo 2.7) e só funciona no site publicado (https). */
+const AUTH = {google: true, email: true};
+const GOOGLE_HD = 'shopee.com';                         // domínio sugerido na tela de escolha de conta do Google ('' para não filtrar)
 const CONFIGURED = /^https:\/\/[^/\s]+/.test(SUPABASE_URL) && !!SUPABASE_KEY && !/COLE_AQUI/.test(SUPABASE_KEY);
 /* Modo demonstração (dados fictícios, sem login) só quando o arquivo é aberto direto do computador
    ou com ?demo=1 na URL. Publicado na Vercel sem chaves, o site mostra um aviso de configuração. */
@@ -765,6 +775,7 @@ function mockClient(){
         MOCK.pending = email; return {error:null};
       },
       verifyOtp: async ({email}) => { MOCK.email = email; emit('SIGNED_IN', email); return {error:null}; },
+      signInWithOAuth: async () => { MOCK.email = 'fellipe.menezes@shopee.com'; emit('SIGNED_IN', MOCK.email); return {data:{}, error:null}; },
       onAuthStateChange: cb => { MOCK.listeners.push(cb); return {data:{subscription:{unsubscribe(){}}}}; }
     },
     storage: { from: () => ({
@@ -880,6 +891,7 @@ I.x = ic24('<path d="M18 6L6 18M6 6l12 12"/>', '', 16);
 I.flame = ic24('<path d="M12 22c4.4 0 7-2.8 7-7 0-3-2-5.5-3.5-7.5-.4 1.6-1.3 2.6-2.5 3C13 8 12 5.3 11 2c-3.5 2.5-6 6.6-6 10.5C5 18 7.6 22 12 22z"/><path d="M12 22c-2 0-3.2-1.4-3.2-3.2 0-1.5.9-2.7 1.9-3.8.4 1 1 1.6 1.8 1.9.6-1 .5-2.3.3-3.4 1.6 1.2 2.7 2.8 2.7 4.6 0 2.1-1.4 3.9-3.5 3.9z"/>', 'i-flame', 16);
 I.hash = ic24('<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>', 'ic', 14);
 I.sliders = ic24('<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', '', 15);
+I.google = ic24('<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>', '', 16);
 I.group = ic24('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', '', 14);
 
 function bannerHTML(h){
@@ -906,17 +918,19 @@ function bannerHTML(h){
 }
 
 /* ===================== LOGIN ===================== */
-function renderLogin(step='email', email=''){
+function renderLogin(step='email', email='', msg0=''){
+  const google = AUTH.google && step === 'email';
   $('#app').innerHTML = `${themeBtn('theme-float')}${bannerHTML(120)}
   <div class="auth-card">
     <h1>${esc(APP_TITLE)}</h1>
     <p class="muted" style="margin:0 0 22px">Controle de solicitações</p>
-    ${step==='email' ? `
+    ${google ? `<button class="btn primary gbtn" type="button" data-action="google">${I.google} Entrar com Google</button>${AUTH.email ? '<div class="or"><span>ou com código por e-mail</span></div>' : ''}` : ''}
+    ${!AUTH.email ? '' : step==='email' ? `
       <form id="f-email">
         <label class="f">E-mail corporativo
           <input class="in" type="email" name="email" required autofocus placeholder="nome@shopee.com" autocomplete="email">
         </label>
-        <button class="btn primary" type="submit" style="width:100%;justify-content:center;height:34px">Receber código de acesso</button>
+        <button class="btn ${google ? '' : 'primary'}" type="submit" style="width:100%;justify-content:center;height:34px">Receber código de acesso</button>
       </form>` : `
       <form id="f-code">
         <p style="margin-top:0">Enviamos um código para <b>${esc(email)}</b>. Digite o código ou abra o link do e-mail.</p>
@@ -926,10 +940,11 @@ function renderLogin(step='email', email=''){
         <button class="btn primary" type="submit" style="width:100%;justify-content:center;height:34px">Entrar</button>
         <button class="btn ghost" type="button" id="back" style="width:100%;justify-content:center;margin-top:8px">Usar outro e-mail</button>
       </form>`}
-    <p class="msg" id="auth-msg"></p>
+    <p class="msg" id="auth-msg">${esc(msg0)}</p>
     <p class="fine">Quer abrir uma solicitação? <a href="${esc(formUrl())}">Preencha o formulário</a>.</p>
   </div>`;
   const msg = t => { $('#auth-msg').textContent = t; };
+  if(!AUTH.email) return;
   if(step==='email'){
     $('#f-email').addEventListener('submit', async e => {
       e.preventDefault();
@@ -951,6 +966,25 @@ function renderLogin(step='email', email=''){
       if(error) msg('Código inválido ou expirado.');
     });
   }
+}
+
+/* Login com Google (OAuth do Supabase). Só funciona no site publicado, não abrindo o arquivo do computador. */
+async function loginGoogle(btn){
+  const msg = t => { const m = $('#auth-msg'); if(m) m.textContent = t; };
+  if(!IS_HTTP) return msg('O login com Google só funciona no site publicado (https). Abra o endereço da Vercel.');
+  if(btn){ btn.disabled = true; btn.querySelector('.lbl') && (btn.querySelector('.lbl').textContent = 'Abrindo o Google...'); }
+  const queryParams = {prompt:'select_account'};
+  if(GOOGLE_HD) queryParams.hd = GOOGLE_HD;
+  const {error} = await sb.auth.signInWithOAuth({provider:'google', options:{redirectTo: appUrl(), queryParams}});
+  if(error){ msg(error.message); if(btn) btn.disabled = false; }
+}
+/* O Supabase volta para o site com o erro na URL quando o e-mail do Google não está cadastrado */
+function authErrorFromUrl(){
+  const h = new URLSearchParams(location.hash.replace(/^#\/?/, '')), q = new URLSearchParams(location.search);
+  const d = h.get('error_description') || q.get('error_description') || h.get('error') || q.get('error');
+  if(!d) return '';
+  history.replaceState(null, '', location.pathname);
+  return /database error|not allowed|signup|email_nao/i.test(d) ? 'Este e-mail não tem acesso. Peça ao owner para cadastrar você.' : d.replace(/\+/g, ' ');
 }
 
 function renderNoAccess(){
@@ -1482,6 +1516,7 @@ document.addEventListener('click', async e => {
   else if(act === 'cancel-edit'){ S.editing = false; renderDrawer(); }
   else if(act === 'close-modal'){ closeModal(); }
   else if(act === 'settings'){ openSettings(); }
+  else if(act === 'google'){ loginGoogle(a); }
   else if(act === 'toggle-burnout'){ changeSetting({burnout: !S.settings.burnout}); }
   else if(act === 'notify'){ openNotify(S.openId); }
   else if(act === 'ntf-edit'){ const tk = byId(S.ntf.taskId); S.ntf.text = S.ntf.text ?? fillTemplate(curTpl(), tk); S.ntf.editing = true; S.ntf.err = ''; renderNotify(); }
@@ -2165,10 +2200,12 @@ window.addEventListener('resize', () => closeMenu(true));
 
 /* ===================== INICIO ===================== */
 async function boot(){
+  S.bootRoute = route();
   if(route() === 'form'){ renderForm(); return; }
+  const authErr = authErrorFromUrl();
   const {data:{session}} = await sb.auth.getSession();
   S.session = session;
-  if(!session){ renderLogin(); return; }
+  if(!session){ renderLogin('email', '', authErr); return; }
   $('#app').innerHTML = skeletonHTML();
   await loadAll();
   if(!S.me){ renderNoAccess(); return; }
@@ -2185,7 +2222,11 @@ sb.auth.onAuthStateChange((ev, session) => {
   if(route() === 'app' && uid !== cur) setTimeout(boot, 0);
 });
 
-window.addEventListener('hashchange', () => { S.openId = null; boot(); });
+window.addEventListener('hashchange', () => {
+  // a biblioteca do Supabase limpa o #access_token da URL ao voltar do Google: isso não é troca de tela
+  if(route() === S.bootRoute && (S.me || S.session)) return;
+  S.openId = null; boot();
+});
 
 setInterval(() => {
   if(S.me && route() === 'app' && !document.hidden && S.view !== 'equipe'){
