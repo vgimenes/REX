@@ -1,0 +1,7 @@
+{
+  "name": "rex-center-of-excellence",
+  "private": true,
+  "version": "1.0.0",
+  "description": "REX - Center of Excellence: controle de solicitações de dados (Supabase + Vercel + SeaTalk)",
+  "engines": { "node": ">=18" }
+}
