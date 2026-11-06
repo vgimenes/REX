@@ -4,4 +4,5 @@
 .vercel
 node_modules
 _*.py
+_keys_test.html
 .DS_Store

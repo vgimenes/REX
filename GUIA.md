@@ -18,9 +18,11 @@ Arquivos do projeto:
 
 | Arquivo | O que é |
 | --- | --- |
-| `index.html` | O site inteiro (REX + formulário + login). Só precisa editar duas linhas (passo 2.6). |
+| `index.html` | O site inteiro (REX + formulário + login). Não tem nenhuma chave dentro; nada precisa ser editado. |
 | `banner.jpg` | Imagem do topo. |
+| `api/config.js` | Entrega à tela a URL e a chave pública do Supabase lidas das variáveis da Vercel. Nenhuma chave fica no HTML. |
 | `api/seatalk.js` | Função serverless que envia as mensagens pelo SeaTalk sem expor segredos. |
+| `apps-script/Code.gs` | Script do Google que grava os anexos do formulário em uma pasta do seu Drive com o nome do projeto. |
 | `supabase/schema.sql` | Cria tabelas, permissões, buckets de arquivos e funções no Supabase. |
 | `vercel.json` | Faz `/solicitar` abrir o formulário e adiciona cabeçalhos de segurança. |
 | `.env.example` | Lista das variáveis de ambiente da Vercel. |
@@ -76,25 +78,39 @@ Em **Project Settings → API** (ou **API Keys**):
 - **Publishable key** (em projetos antigos chama-se `anon` key) → pode ficar no HTML, é pública.
 - **Secret key** (em projetos antigos `service_role`) → **nunca** no HTML; só na Vercel (passo 4.3).
 
-### 2.6 Colocar as chaves no site
-Abra `index.html` em qualquer editor de texto (Bloco de Notas serve) e, perto da linha 527, preencha:
+### 2.6 Onde as chaves ficam
+Em lugar nenhum do código. As três chaves vão para as variáveis de ambiente da Vercel (passo 4.3): a tela busca a URL e a chave pública em `/api/config` ao abrir, e a função `/api/seatalk` usa a chave secreta. Se o site for publicado sem as variáveis, aparece a tela "Falta configurar o Supabase".
 
-```js
-const SUPABASE_URL = 'https://abcdefghijkl.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_...';   // ou a anon key
-```
+Vale ser claro sobre o que isso protege: a chave *publishable/anon* é pública por natureza, porque o navegador precisa dela para falar com o Supabase (ela aparece na aba Rede do navegador de qualquer visitante). O que protege os dados são as políticas de acesso do `schema.sql`. Tirá-la do HTML evita que fique no GitHub e permite trocar as chaves na Vercel sem mexer em código. A chave *secreta* nunca chega ao navegador.
 
-Salve. A partir daqui o modo demonstração desliga sozinho.
+### 2.7 Login com Google (opcional)
+O botão **Entrar com Google** já está na tela de login (`const AUTH = {google: true, email: true}` no `index.html`). Para ele funcionar, o Supabase precisa de um cliente OAuth do Google. Quem pode entrar continua sendo decidido pela tabela `profiles`: uma conta Google que não está cadastrada vê "Este e-mail não tem acesso".
+
+**No Google Cloud (console.cloud.google.com)**
+1. Crie um projeto (ex.: `REX`). Se a Shopee usa Google Workspace e a TI puder criar o projeto dentro da organização, melhor: a tela de consentimento pode ser do tipo **Internal**, aceitando só contas da empresa. Senão, use sua conta e o tipo **External** (funciona igual, porque o Supabase barra quem não está em `profiles`).
+2. **APIs e serviços → Tela de consentimento OAuth** (no console novo: **Google Auth Platform → Branding/Audience**): nome do app "REX - Center of Excellence", e-mail de suporte e de contato. Escopos: deixe os padrões (e-mail, perfil, openid). Se for External, em **Audience** clique em **Publish app** para sair do modo de teste; sem isso só as contas listadas como "test users" conseguem entrar.
+3. **Credenciais → Criar credenciais → ID do cliente OAuth → Aplicativo da Web**, nome `REX`:
+   - Origens JavaScript autorizadas: `https://SEU-SITE.vercel.app`
+   - URIs de redirecionamento autorizados: `https://SEU-PROJETO.supabase.co/auth/v1/callback` (copie exatamente da tela do provedor Google no Supabase, item abaixo).
+4. Salve e copie o **ID do cliente** e a **Chave secreta do cliente**.
+
+**No Supabase**
+5. **Authentication → Sign In / Providers → Google**: ligue, cole o Client ID e o Client Secret, salve. Nessa tela aparece a URL de callback usada no item 3.
+6. Confira **Authentication → URL Configuration**: Site URL e Redirect URLs com o endereço da Vercel (`https://SEU-SITE.vercel.app/**`).
+
+**Detalhes**
+- O login com Google só funciona no site publicado (https), não abrindo o `index.html` do computador. Para testar antes, o código por e-mail continua disponível.
+- `GOOGLE_HD = 'shopee.com'` no `index.html` faz a tela do Google já sugerir a conta da empresa. Deixe `''` para não filtrar.
+- Quem já entrava por código e passa a usar o Google com o mesmo e-mail cai na mesma conta; nada muda nas tarefas atribuídas.
+- Para deixar **só** o Google, use `const AUTH = {google: true, email: false}`.
 
 ---
 
 ## 3. Testar antes de publicar
 
-Abra `index.html` com dois cliques e tente entrar com o e-mail do owner. Você deve receber o código, entrar e ver o painel vazio. Abra o formulário pelo link "Preencha o formulário", envie uma solicitação de teste e veja ela aparecer no REX em tempo real.
+Abrindo `index.html` com dois cliques você vê o site em modo demonstração, com dados fictícios: serve para conhecer as telas e mostrar para o time, mas não usa o banco. O primeiro teste de verdade acontece depois do passo 4.4, no endereço da Vercel: entre com o e-mail do owner, receba o código, veja o painel vazio, abra o formulário e envie uma solicitação de teste. Ela deve aparecer no REX em tempo real.
 
 Se o código não chegar: confira a caixa de spam, o modelo de e-mail (passo 2.3) e **Authentication → Users** (deve existir um usuário com o seu e-mail). Se aparecer "Este e-mail não tem acesso", o e-mail não está em `profiles`: volte ao passo 2.2, item 3.
-
-Notificar pelo SeaTalk ainda não funciona nesse teste local, porque a função `/api/seatalk` só existe na Vercel.
 
 ---
 
@@ -102,7 +118,7 @@ Notificar pelo SeaTalk ainda não funciona nesse teste local, porque a função 
 
 ### 4.1 Subir o código no GitHub
 1. Em github.com, **New repository**, nome `rex`, **Private**, **Create repository**.
-2. Na página do repositório, clique em **uploading an existing file** e arraste os arquivos e pastas do projeto (`index.html`, `banner.jpg`, `api/`, `supabase/`, `vercel.json`, `package.json`, `.env.example`, `.gitignore`, `GUIA.md`). **Commit changes**.
+2. Na página do repositório, clique em **uploading an existing file** e arraste os arquivos e pastas do projeto (`index.html`, `banner.jpg`, `api/`, `supabase/`, `apps-script/`, `vercel.json`, `package.json`, `.env.example`, `.gitignore`, `GUIA.md`). **Commit changes**.
 
 Depois, toda vez que você alterar um arquivo e subir de novo, a Vercel publica a nova versão sozinha.
 
@@ -116,18 +132,30 @@ Em **Project → Settings → Environment Variables**, crie (nomes exatamente co
 
 | Nome | Valor |
 | --- | --- |
-| `SUPABASE_URL` | Project URL do Supabase |
-| `SUPABASE_ANON_KEY` | publishable/anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | secret/service_role key |
+| `SUPABASE_URL` | Project URL do Supabase (obrigatória: a tela usa) |
+| `SUPABASE_ANON_KEY` | publishable/anon key (obrigatória: a tela usa) |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret/service_role key (só a função do SeaTalk) |
+| `DRIVE_UPLOAD_URL` | URL do Apps Script dos anexos (passo 4.5) – vazia = anexos no Supabase Storage |
 | `SEATALK_WEBHOOK_URL` | webhook do grupo (passo 5A) – opcional |
 | `SEATALK_APP_ID` / `SEATALK_APP_SECRET` | credenciais do bot (passo 5B) – opcional |
 
-Depois de salvar, vá em **Deployments → ⋯ → Redeploy** para a função carregar as variáveis.
+Depois de salvar, vá em **Deployments → ⋯ → Redeploy**: as variáveis só entram em vigor em um deploy novo. Sem `SUPABASE_URL` e `SUPABASE_ANON_KEY` o site abre na tela "Falta configurar o Supabase".
 
 ### 4.4 Fechar o ciclo com o Supabase
 Volte em **Authentication → URL Configuration** e coloque o endereço da Vercel em **Site URL** e `https://SEU-SITE.vercel.app/**` em **Redirect URLs**.
 
 Pronto: `https://SEU-SITE.vercel.app` é o REX e `https://SEU-SITE.vercel.app/solicitar` é o formulário (o botão **Copiar link do formulário** copia esse endereço).
+
+### 4.5 Anexos do formulário no Google Drive
+Com `DRIVE_UPLOAD_URL` definida, cada arquivo anexado no formulário vai para **Meu Drive → REX - Anexos → (nome do projeto)**, e o REX mostra o link do arquivo e da pasta na solicitação. Projetos com o mesmo nome compartilham a pasta. Quem recebe os arquivos é um Google Apps Script rodando com a sua conta, então o solicitante não precisa estar logado no Google.
+
+1. Entre em https://script.google.com com a conta em que a pasta deve ficar → **Novo projeto**. Apague o conteúdo, cole o arquivo `apps-script/Code.gs`, salve e dê o nome `REX anexos`. Se quiser outro nome de pasta raiz, mude `ROOT_FOLDER_NAME`.
+2. **Implantar → Nova implantação** → tipo **App da Web** → *Executar como*: **Eu** · *Quem pode acessar*: **Qualquer pessoa** → **Implantar**. Na autorização, clique em *Avançado → Acessar REX anexos (não seguro) → Permitir* (é o seu próprio script; a tela aparece porque ele não passou pela verificação do Google).
+3. Copie a **URL do app da Web** (termina em `/exec`). Abrindo-a no navegador você deve ver `{"ok":true,"service":"REX anexos"...}`.
+4. Na Vercel, salve como `DRIVE_UPLOAD_URL` e faça um redeploy.
+5. No Drive, compartilhe a pasta **REX - Anexos** com o time como leitor; sem isso os links abrem só para você.
+
+Avisos: cada mudança em `Code.gs` só vale depois de **Implantar → Gerenciar implantações → editar → Nova versão**. Se a conta da empresa não permitir "Qualquer pessoa" em apps da Web, deixe `DRIVE_UPLOAD_URL` vazia e os anexos continuam no Supabase Storage. Os arquivos ficam na sua conta: ao excluir uma solicitação no REX, a pasta no Drive não é apagada.
 
 ---
 
@@ -172,7 +200,12 @@ Abra uma solicitação de teste, clique em **Notificar**, escolha um modelo, edi
 
 | Sintoma | Causa provável | O que fazer |
 | --- | --- | --- |
-| "Este e-mail não tem acesso" ao pedir o código | E-mail não está em `profiles` | Owner adiciona na aba Equipe (ou ajuste o passo 2.2, item 3) |
+| Site na Vercel mostra "Falta configurar o Supabase" | `SUPABASE_URL` / `SUPABASE_ANON_KEY` não estão nas variáveis da Vercel, ou o deploy é anterior a elas | Passo 4.3 e redeploy; depois Ctrl+F5 |
+| Anexo falha: "Não foi possível enviar … para o Google Drive" | Apps Script não publicado para "Qualquer pessoa", URL errada ou versão nova não implantada | Passo 4.5, itens 2–3 e o aviso sobre "Nova versão" |
+| Links dos anexos pedem acesso | Pasta "REX - Anexos" não compartilhada com o time | Passo 4.5, item 5 |
+| "Este e-mail não tem acesso" ao pedir o código ou ao voltar do Google | E-mail não está em `profiles` | Owner adiciona na aba Equipe (ou ajuste o passo 2.2, item 3) |
+| Google: "redirect_uri_mismatch" | URI de callback diferente no Google Cloud | Passo 2.7, item 3: cole a URL exata do provedor Google do Supabase |
+| Google: "access blocked / app não verificado" para colegas | Consentimento External ainda em modo de teste | Passo 2.7, item 2: Publish app (ou adicione a pessoa como test user) |
 | Código não chega | Limite do SMTP padrão ou spam | Passo 2.4 (SMTP próprio); confira a pasta de spam |
 | Entra, mas a tela diz "Sem acesso" | Perfil desativado ou e-mail diferente do cadastrado | Reative na aba Equipe / confira o e-mail |
 | Link do e-mail abre em "localhost" ou erro de redirect | URL não autorizada | Passo 2.3, item 3 (Redirect URLs) |
@@ -194,4 +227,3 @@ O modelo "Pesquisa de satisfação (NPS)" já aparece no pop-up como *em breve*.
 3. Na função `/api/seatalk`, quando a tarefa virar **Concluído**, gerar o token e enviar o modelo de NPS com o link pelo mesmo bot.
 4. Mostrar a média de NPS nos cards do painel.
 
-Se mais tarde o time preferir entrar com a conta Google em vez do código por e-mail, basta ativar o provedor Google em **Authentication → Providers** e trocar a chamada `signInWithOtp` por `signInWithOAuth({provider:'google'})` no `index.html`; o resto (perfis, permissões) continua igual, porque tudo é amarrado pelo e-mail.
