@@ -22,7 +22,6 @@ Arquivos do projeto:
 | `banner.jpg` | Imagem do topo. |
 | `api/config.js` | Entrega à tela a URL e a chave pública do Supabase lidas das variáveis da Vercel. Nenhuma chave fica no HTML. |
 | `api/seatalk.js` | Função serverless que envia as mensagens pelo SeaTalk sem expor segredos. |
-| `apps-script/Code.gs` | Script do Google que grava os anexos do formulário em uma pasta do seu Drive com o nome do projeto. |
 | `supabase/schema.sql` | Cria tabelas, permissões, buckets de arquivos e funções no Supabase. |
 | `vercel.json` | Faz `/solicitar` abrir o formulário e adiciona cabeçalhos de segurança. |
 | `.env.example` | Lista das variáveis de ambiente da Vercel. |
@@ -118,7 +117,7 @@ Se o código não chegar: confira a caixa de spam, o modelo de e-mail (passo 2.3
 
 ### 4.1 Subir o código no GitHub
 1. Em github.com, **New repository**, nome `rex`, **Private**, **Create repository**.
-2. Na página do repositório, clique em **uploading an existing file** e arraste os arquivos e pastas do projeto (`index.html`, `banner.jpg`, `api/`, `supabase/`, `apps-script/`, `vercel.json`, `package.json`, `.env.example`, `.gitignore`, `GUIA.md`). **Commit changes**.
+2. Na página do repositório, clique em **uploading an existing file** e arraste os arquivos e pastas do projeto (`index.html`, `banner.jpg`, `api/`, `supabase/`, `vercel.json`, `package.json`, `.env.example`, `.gitignore`, `GUIA.md`). **Commit changes**.
 
 Depois, toda vez que você alterar um arquivo e subir de novo, a Vercel publica a nova versão sozinha.
 
@@ -135,7 +134,6 @@ Em **Project → Settings → Environment Variables**, crie (nomes exatamente co
 | `SUPABASE_URL` | Project URL do Supabase (obrigatória: a tela usa) |
 | `SUPABASE_ANON_KEY` | publishable/anon key (obrigatória: a tela usa) |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret/service_role key (só a função do SeaTalk) |
-| `DRIVE_UPLOAD_URL` | URL do Apps Script dos anexos (passo 4.5) – vazia = anexos no Supabase Storage |
 | `SEATALK_WEBHOOK_URL` | webhook do grupo (passo 5A) – opcional |
 | `SEATALK_APP_ID` / `SEATALK_APP_SECRET` | credenciais do bot (passo 5B) – opcional |
 
@@ -146,44 +144,57 @@ Volte em **Authentication → URL Configuration** e coloque o endereço da Verce
 
 Pronto: `https://SEU-SITE.vercel.app` é o REX e `https://SEU-SITE.vercel.app/solicitar` é o formulário (o botão **Copiar link do formulário** copia esse endereço).
 
-### 4.5 Anexos do formulário no Google Drive
-Com `DRIVE_UPLOAD_URL` definida, cada arquivo anexado no formulário vai para **Meu Drive → REX - Anexos → (nome do projeto)**, e o REX mostra o link do arquivo e da pasta na solicitação. Projetos com o mesmo nome compartilham a pasta. Quem recebe os arquivos é um Google Apps Script rodando com a sua conta, então o solicitante não precisa estar logado no Google.
-
-1. Entre em https://script.google.com com a conta em que a pasta deve ficar → **Novo projeto**. Apague o conteúdo, cole o arquivo `apps-script/Code.gs`, salve e dê o nome `REX anexos`. Se quiser outro nome de pasta raiz, mude `ROOT_FOLDER_NAME`.
-2. **Implantar → Nova implantação** → tipo **App da Web** → *Executar como*: **Eu** · *Quem pode acessar*: **Qualquer pessoa** → **Implantar**. Na autorização, clique em *Avançado → Acessar REX anexos (não seguro) → Permitir* (é o seu próprio script; a tela aparece porque ele não passou pela verificação do Google).
-3. Copie a **URL do app da Web** (termina em `/exec`). Abrindo-a no navegador você deve ver `{"ok":true,"service":"REX anexos"...}`.
-4. Na Vercel, salve como `DRIVE_UPLOAD_URL` e faça um redeploy.
-5. No Drive, compartilhe a pasta **REX - Anexos** com o time como leitor; sem isso os links abrem só para você.
-
-Avisos: cada mudança em `Code.gs` só vale depois de **Implantar → Gerenciar implantações → editar → Nova versão**. Se a conta da empresa não permitir "Qualquer pessoa" em apps da Web, deixe `DRIVE_UPLOAD_URL` vazia e os anexos continuam no Supabase Storage. Os arquivos ficam na sua conta: ao excluir uma solicitação no REX, a pasta no Drive não é apagada.
-
 ---
 
 ## 5. SeaTalk (botão Notificar)
 
-O botão **Notificar** fica dentro da solicitação (topo da gaveta e na seção "Notificações enviadas"). Ele abre os modelos prontos, preenchidos com os dados do projeto, e envia por um de três destinos. Você pode configurar um ou os dois caminhos abaixo; o pop-up mostra o que está disponível.
+O botão **Notificar** fica dentro da solicitação (topo da gaveta e na seção "Notificações enviadas"). Ele abre modelos prontos, preenchidos com os dados do projeto, e envia por um de três destinos:
 
-### 5A. Caminho rápido: webhook de grupo (destino "Canal do time")
-Não precisa criar app nem pedir permissão. Serve para avisar um grupo onde o time e os solicitantes estão.
+| Destino no pop-up | O que é | O que precisa |
+| --- | --- | --- |
+| Canal do time | Avisa um grupo do SeaTalk onde o time (e, se quiser, os solicitantes) está | Webhook do grupo (5A) |
+| Grupo da solicitação | Grupo do SeaTalk específico daquela solicitação, vinculado na tarefa | Bot (5B) adicionado ao grupo |
+| Solicitante | Mensagem direta para quem pediu | Bot (5B) + permissão de admin + solicitante assinante do bot |
 
-1. No **SeaTalk Desktop**, abra o grupo → configurações do grupo → **System Accounts** → **Add System Account** (quem não é dono do grupo precisa ser "account admin" do grupo).
-2. Dê um nome (ex.: REX) e copie a URL do webhook: `https://openapi.seatalk.io/webhook/group/...`
-3. Na Vercel, salve como `SEATALK_WEBHOOK_URL` e faça o redeploy.
+Comece pelo 5A: funciona em minutos e não depende de ninguém. O 5B pode vir depois.
 
-A mensagem chega ao grupo com o número e o nome da solicitação e o e-mail do solicitante. Limite do SeaTalk: 60 mensagens por minuto por webhook.
+### 5.0 Ver o que já está configurado
+Abra `https://SEU-SITE.vercel.app/api/seatalk` no navegador. A resposta diz o que a Vercel enxerga, sem expor segredos: `{"dm":false,"group":false,"webhook":true}` significa só o webhook configurado. O pop-up Notificar usa essa mesma resposta para habilitar ou apagar cada destino.
 
-### 5B. Bot (destinos "Solicitante" e "Grupo da solicitação")
-Permite mensagem direta para quem pediu e mensagens em um grupo específico de cada solicitação.
+### 5A. Webhook de grupo (destino "Canal do time")
+1. No **SeaTalk Desktop**, abra o grupo (ou crie um, ex.: "REX - Avisos", com o time e os solicitantes frequentes).
+2. Configurações do grupo → **System Accounts** → **Add System Account**. Se a opção não aparecer, peça ao dono do grupo para te tornar admin do grupo ou criar a conta.
+3. Nome `REX`, confirme e copie a **Webhook URL**: `https://openapi.seatalk.io/webhook/group/...`
+4. Na Vercel: **Settings → Environment Variables** → `SEATALK_WEBHOOK_URL` = essa URL → Save.
+5. **Deployments → ⋯ no último deploy → Redeploy**. Espere terminar.
+6. Confira em `/api/seatalk`: `"webhook":true`.
+7. No REX, abra uma solicitação de teste → **Notificar** → destino **Canal do time** → modelo *Recado* → edite o texto entre [colchetes] → **Enviar pelo SeaTalk**. A mensagem chega ao grupo com o número e o nome da solicitação e o e-mail do solicitante.
 
-1. Acesse https://open.seatalk.io (no desktop) e crie um **App** com a capacidade **Bot** ativada.
-2. Em **Basic Info & Credentials**, copie **App ID** e **App Secret** → Vercel: `SEATALK_APP_ID` e `SEATALK_APP_SECRET`. Redeploy.
-3. Em permissões, habilite: **Send Message to Bot Subscriber/User**, **Send Message to Group Chat** e **Get Employee Code with Email** (esta última costuma exigir aprovação do administrador do SeaTalk da empresa — é ela que converte o e-mail do solicitante em destinatário).
-4. Coloque o app **Online**.
-5. Mensagem direta só chega para quem **assinou** o bot: peça para os solicitantes abrirem o bot no SeaTalk e clicarem em *Subscribe*. Se não tiverem feito isso, o REX mostra o aviso "O destinatário ainda não assinou o bot".
-6. Para o destino **Grupo da solicitação**: adicione o bot como membro do grupo no SeaTalk; no REX, abra a solicitação → **Notificar** → escolha "Grupo da solicitação" → **Listar grupos em que o bot está** → **Vincular à solicitação**. (Também dá para colar o ID em **Editar → ID do grupo no SeaTalk**.)
+Limite do SeaTalk: 60 mensagens por minuto por webhook.
 
-### 5C. Testar
-Abra uma solicitação de teste, clique em **Notificar**, escolha um modelo, edite se quiser (trechos entre [colchetes] precisam ser preenchidos) e **Enviar pelo SeaTalk**. O resultado fica registrado em "Notificações enviadas", inclusive quando falha, com o motivo. Erros detalhados aparecem em **Vercel → Project → Logs**.
+### 5B. Bot (destinos "Grupo da solicitação" e "Solicitante")
+1. Acesse https://open.seatalk.io (no computador, com a conta da empresa) → **Create App**. Nome `REX`, descrição e ícone.
+2. Ative a capacidade **Bot**.
+3. Em **Basic Info & Credentials**, copie **App ID** e **App Secret**.
+4. Em permissões (*Permissions*/*Scopes*), solicite: **Send Message to Group Chat**, **Send Message to Bot Subscriber** e **Get Employee Code with Email**. As duas últimas, pela experiência interna da Shopee, dependem de aprovação do administrador do SeaTalk; a de grupo costuma ser liberada de imediato.
+5. Publique o app (**Release**/**Online**). Enquanto estiver *Offline*, o REX mostra "O app do SeaTalk não está online".
+6. Na Vercel: `SEATALK_APP_ID` e `SEATALK_APP_SECRET` → Save → Redeploy. Confira em `/api/seatalk`: `"dm":true,"group":true`.
+7. **Grupo da solicitação**: no SeaTalk, adicione o bot `REX` como membro do grupo daquela solicitação. No REX, abra a solicitação → **Notificar** → **Grupo da solicitação** → **Listar grupos em que o bot está** → escolha o grupo → **Vincular à solicitação**. A partir daí o grupo fica salvo na tarefa (também aparece em **Editar → ID do grupo no SeaTalk**).
+8. **Solicitante** (mensagem direta): só funciona com a permissão *Get Employee Code with Email* aprovada e com o solicitante tendo assinado o bot: ele busca `REX` em *Bots* no SeaTalk, abre e clica em **Subscribe**. Teste primeiro com você mesmo: crie uma solicitação com o seu e-mail, assine o bot e envie.
+
+### 5C. Testar e diagnosticar
+O resultado de cada envio fica em "Notificações enviadas" dentro da solicitação, inclusive quando falha, com o motivo em português. Detalhes técnicos: **Vercel → Project → Logs**, função `/api/seatalk`.
+
+| Mensagem no REX | Causa | O que fazer |
+| --- | --- | --- |
+| Função /api/seatalk indisponível | Site aberto fora da Vercel ou deploy antigo | Use o endereço da Vercel; redeploy |
+| Defina SEATALK_… na Vercel | Variável faltando ou sem redeploy | Passos 5A.4–5 / 5B.6 |
+| O bot não tem permissão para esta ação (103) | Permissão não aprovada | Passo 5B.4; use o grupo enquanto espera |
+| O app do SeaTalk não está online (105) | App não publicado | Passo 5B.5 |
+| O destinatário ainda não assinou o bot (3002) | Solicitante não assinou | Passo 5B.8 |
+| Não encontrei … no SeaTalk | E-mail diferente do cadastrado no SeaTalk | Corrija o e-mail em **Editar** |
+| Esta solicitação não tem um grupo vinculado | Falta vincular o grupo | Passo 5B.7 |
+| O webhook do SeaTalk recusou a mensagem | URL errada ou conta do sistema removida do grupo | Gere uma nova URL (5A.3) |
 
 ---
 
@@ -201,8 +212,6 @@ Abra uma solicitação de teste, clique em **Notificar**, escolha um modelo, edi
 | Sintoma | Causa provável | O que fazer |
 | --- | --- | --- |
 | Site na Vercel mostra "Falta configurar o Supabase" | `SUPABASE_URL` / `SUPABASE_ANON_KEY` não estão nas variáveis da Vercel, ou o deploy é anterior a elas | Passo 4.3 e redeploy; depois Ctrl+F5 |
-| Anexo falha: "Não foi possível enviar … para o Google Drive" | Apps Script não publicado para "Qualquer pessoa", URL errada ou versão nova não implantada | Passo 4.5, itens 2–3 e o aviso sobre "Nova versão" |
-| Links dos anexos pedem acesso | Pasta "REX - Anexos" não compartilhada com o time | Passo 4.5, item 5 |
 | "Este e-mail não tem acesso" ao pedir o código ou ao voltar do Google | E-mail não está em `profiles` | Owner adiciona na aba Equipe (ou ajuste o passo 2.2, item 3) |
 | Google: "redirect_uri_mismatch" | URI de callback diferente no Google Cloud | Passo 2.7, item 3: cole a URL exata do provedor Google do Supabase |
 | Google: "access blocked / app não verificado" para colegas | Consentimento External ainda em modo de teste | Passo 2.7, item 2: Publish app (ou adicione a pessoa como test user) |

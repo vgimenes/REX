@@ -500,8 +500,6 @@ select.pill:hover,select.tag:hover{filter:brightness(1.15)}
 .h3-row{display:flex;align-items:center;gap:10px;margin:0 0 8px}
 .h3-row h3{margin:0}
 
-.att.folder{font-weight:600}
-.att.folder .ic{margin-right:6px}
 /* ===== login ===== */
 .gbtn{width:100%;justify-content:center;height:38px;gap:9px}
 .gbtn:disabled{opacity:.7;cursor:default}
@@ -531,7 +529,7 @@ select.pill:hover,select.tag:hover{filter:brightness(1.15)}
 
 /* ===================== CONFIGURACAO ===================== */
 /* Nenhuma chave fica neste arquivo. Publicado na Vercel, o site busca a configuração em /api/config,
-   que lê as variáveis de ambiente SUPABASE_URL, SUPABASE_ANON_KEY e DRIVE_UPLOAD_URL (GUIA.md, passo 4.3).
+   que lê as variáveis de ambiente SUPABASE_URL e SUPABASE_ANON_KEY (GUIA.md, passo 4.3).
    Aberto direto do computador, ou com ?demo=1 no endereço, roda em MODO DEMONSTRAÇÃO com dados fictícios. */
 const CONFIG_API = '/api/config';
 const APP_TITLE = 'REX - Center of Excellence';
@@ -542,7 +540,7 @@ const NOTIFY_API = '/api/seatalk';                      // função serverless d
 const AUTH = {google: true, email: true};
 const GOOGLE_HD = 'shopee.com';                         // domínio sugerido na tela de escolha de conta do Google ('' para não filtrar)
 const DEMO = location.protocol === 'file:' || /[?&]demo=1\b/.test(location.search);
-const CFG = {supabaseUrl:'', supabaseKey:'', driveUploadUrl:''};   // preenchido por loadConfig()
+const CFG = {supabaseUrl:'', supabaseKey:''};   // preenchido por loadConfig()
 
 /* ===================== CONSTANTES ===================== */
 const STATUS = [
@@ -648,8 +646,7 @@ function mockClient(){
       impacted_structures:'Recrutamento Brasil, TA Tech', project_type:type, needs_interaction: num%2===0,
       report_frequency:freq, report_channels: ch ? [].concat(ch) : [],
       description:'Contexto da solicitação.\nPrecisamos de uma solução para acompanhar os indicadores do time com atualização automática e visão por recruiter.',
-      attachments: num%3===0 ? [{name:'briefing.pdf', size:182000, url:'https://drive.google.com/', drive_id:'demo'}] : [],
-      drive_folder_url: num%3===0 ? 'https://drive.google.com/' : null,
+      attachments: num%3===0 ? [{path:'x/briefing.pdf', name:'briefing.pdf', size:182000}] : [],
       status, complexity:cx, assignee_id: asg ? uid(asg) : null,
       created_at:new Date(created).toISOString(), due_at:new Date(due).toISOString(),
       completed_at: status==='concluida' ? new Date(created + Math.min(SLA_MS[cx]*0.8, 20*D)).toISOString() : null,
@@ -896,7 +893,6 @@ I.x = ic24('<path d="M18 6L6 18M6 6l12 12"/>', '', 16);
 I.flame = ic24('<path d="M12 22c4.4 0 7-2.8 7-7 0-3-2-5.5-3.5-7.5-.4 1.6-1.3 2.6-2.5 3C13 8 12 5.3 11 2c-3.5 2.5-6 6.6-6 10.5C5 18 7.6 22 12 22z"/><path d="M12 22c-2 0-3.2-1.4-3.2-3.2 0-1.5.9-2.7 1.9-3.8.4 1 1 1.6 1.8 1.9.6-1 .5-2.3.3-3.4 1.6 1.2 2.7 2.8 2.7 4.6 0 2.1-1.4 3.9-3.5 3.9z"/>', 'i-flame', 16);
 I.hash = ic24('<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>', 'ic', 14);
 I.sliders = ic24('<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', '', 15);
-I.folder = ic24('<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>', 'ic', 14);
 I.google = ic24('<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>', '', 16);
 I.group = ic24('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>', '', 14);
 
@@ -1051,26 +1047,6 @@ function renderForm(){
 }
 
 /* aviso exibido no formulario quando o Modo Burnout esta ligado ou algum limite foi ultrapassado */
-/* Envia um arquivo para o Google Drive pelo Apps Script (apps-script/Code.gs).
-   O pedido vai como texto simples para não exigir preflight de CORS, que o Apps Script não responde. */
-const fileToBase64 = file => new Promise((res, rej) => {
-  const r = new FileReader();
-  r.onload = () => res(String(r.result).split(',')[1] || '');
-  r.onerror = () => rej(new Error('Não foi possível ler o arquivo ' + file.name));
-  r.readAsDataURL(file);
-});
-async function uploadToDrive(file, project){
-  if(DEMO){ await new Promise(r => setTimeout(r, 400)); return {name:file.name, size:file.size, url:'https://drive.google.com/', drive_id:'demo', folder_url:'https://drive.google.com/'}; }
-  const data = await fileToBase64(file);
-  let j;
-  try{
-    const r = await fetch(CFG.driveUploadUrl, {method:'POST', body: JSON.stringify({filename:file.name, mime:file.type || 'application/octet-stream', size:file.size, project, data})});
-    j = await r.json();
-  }catch(e){ throw new Error(`Não foi possível enviar ${file.name} para o Google Drive. Confira se o Apps Script está publicado para "Qualquer pessoa" (GUIA.md, passo 4.5).`); }
-  if(!j || !j.ok) throw new Error((j && j.error) ? `Google Drive: ${j.error}` : `O Google Drive recusou ${file.name}.`);
-  return {name: j.name || file.name, size: j.size || file.size, url: j.url, drive_id: j.id, folder_url: j.folder_url};
-}
-
 function capWarnHTML(hidden){
   return `<div class="warn-box" id="cap-warn" role="status" ${hidden ? 'hidden' : ''}>${I.flame}<div><b>Os prazos podem se estender</b><p>${esc(CAPACITY_WARNING)}</p></div></div>`;
 }
@@ -1109,28 +1085,19 @@ async function submitRequest(form){
   const id = crypto.randomUUID();
   const project = fd.get('name').trim();
   const attachments = [];
-  let folderUrl = null;
   try{
     for(let i = 0; i < files.length; i++){
       const f = files[i];
       btn.textContent = `Enviando anexo ${i + 1} de ${files.length}...`;
-      if(CFG.driveUploadUrl || DEMO){
-        // pasta no Google Drive com o nome do projeto (Apps Script, GUIA.md passo 4.5)
-        const a = await uploadToDrive(f, project);
-        attachments.push(a);
-        folderUrl = a.folder_url || folderUrl;
-      } else {
-        const path = `${id}/${Date.now()}-${safeName(f.name)}`;
-        const {error} = await sb.storage.from('anexos').upload(path, f, {contentType: f.type || 'application/octet-stream'});
-        if(error) throw error;
-        attachments.push({path, name:f.name, size:f.size});
-      }
+      const path = `${id}/${Date.now()}-${safeName(f.name)}`;
+      const {error} = await sb.storage.from('anexos').upload(path, f, {contentType: f.type || 'application/octet-stream'});
+      if(error) throw error;
+      attachments.push({path, name:f.name, size:f.size});
     }
     btn.textContent = 'Registrando solicitação...';
     const row = {
       id,
       name: project,
-      drive_folder_url: folderUrl,
       requester_email: fd.get('requester_email').trim().toLowerCase(),
       impacted_structures: fd.get('impacted_structures').trim(),
       project_type: fd.get('project_type'),
@@ -1480,19 +1447,17 @@ function notifsHTML(list){
 async function loadAtt(t){
   const list = t.attachments || [];
   const box = () => $('#att');
-  if(!list.length && !t.drive_folder_url){ if(box()) box().innerHTML = '<span class="muted">Sem anexos.</span>'; return; }
-  // anexos antigos (Supabase Storage) precisam de link assinado; os do Drive já vêm com url
-  const need = list.filter(a => a.path && !a.url && (!S.urls[a.path] || S.urls[a.path].exp < Date.now()));
+  if(!list.length){ if(box()) box().innerHTML = '<span class="muted">Sem anexos.</span>'; return; }
+  const need = list.filter(a => !S.urls[a.path] || S.urls[a.path].exp < Date.now());
   if(need.length){
     const {data, error} = await sb.storage.from('anexos').createSignedUrls(need.map(a=>a.path), 3600);
     if(!error) data.forEach(d => { if(d.signedUrl) S.urls[d.path] = {url:d.signedUrl, exp: Date.now()+3000e3}; });
   }
   if(S.openId !== t.id || !box()) return;
-  const folder = t.drive_folder_url ? `<a class="att folder" href="${esc(t.drive_folder_url)}" target="_blank" rel="noopener">${I.folder}<span>Pasta do projeto no Google Drive</span></a>` : '';
-  box().innerHTML = folder + list.map(a => {
-    const url = a.url || (a.path && S.urls[a.path] && S.urls[a.path].url);
-    return url ? `<a class="att" href="${esc(url)}" target="_blank" rel="noopener"><span>${esc(a.name)}</span><small>${fmtSize(a.size)}</small></a>`
-               : `<span class="att off">${esc(a.name)}</span>`;
+  box().innerHTML = list.map(a => {
+    const u = S.urls[a.path];
+    return u ? `<a class="att" href="${esc(u.url)}" target="_blank" rel="noopener"><span>${esc(a.name)}</span><small>${fmtSize(a.size)}</small></a>`
+             : `<span class="att off">${esc(a.name)}</span>`;
   }).join('');
 }
 
@@ -1588,7 +1553,7 @@ document.addEventListener('click', async e => {
     if(tk && confirm(`Excluir a solicitação "${tk.name}"? Essa ação não pode ser desfeita.`)){
       const {error} = await sb.from('tasks').delete().eq('id', id);
       if(error){ toast('Não foi possível excluir: ' + error.message, 'err'); return; }
-      const paths = (tk.attachments||[]).map(x=>x.path).filter(Boolean); // só anexos antigos do Supabase; os do Drive ficam na pasta
+      const paths = (tk.attachments||[]).map(x=>x.path);
       if(paths.length) await sb.storage.from('anexos').remove(paths);
       S.tasks = S.tasks.filter(x => x.id !== id); S.openId = null; render();
       toast('Solicitação excluída.');
