@@ -256,6 +256,36 @@ create table if not exists public.notifications (
 );
 create index if not exists notifications_task_idx on public.notifications (task_id, created_at desc);
 
+-- 6b) Templates de notificação criados pelo time (botão "Adicionar template" no Notificar).
+--     O modelo "Atualização" fica no código; aqui ficam só os adicionados.
+create table if not exists public.templates (
+  id          uuid primary key default gen_random_uuid(),
+  label       text not null check (char_length(label) between 1 and 80),
+  text        text not null check (char_length(text) between 1 and 3500),
+  created_by  text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+create or replace function public.templates_touch() returns trigger
+language plpgsql as $$
+begin
+  if tg_op = 'INSERT' then
+    new.created_by := coalesce(nullif(public.my_email(), ''), new.created_by);
+    new.created_at := now();
+  else
+    new.created_by := old.created_by;
+    new.created_at := old.created_at;
+  end if;
+  new.updated_at := now();
+  return new;
+end $$;
+
+drop trigger if exists templates_touch on public.templates;
+create trigger templates_touch
+  before insert or update on public.templates
+  for each row execute function public.templates_touch();
+
 -- -------------------------------------------------------------------------------------
 -- 7) Fotos de perfil
 -- -------------------------------------------------------------------------------------
@@ -273,6 +303,7 @@ alter table public.tasks         enable row level security;
 alter table public.settings      enable row level security;
 alter table public.notifications enable row level security;
 alter table public.avatars       enable row level security;
+alter table public.templates     enable row level security;
 
 -- profiles
 drop policy if exists "membros veem perfis"        on public.profiles;
@@ -320,6 +351,20 @@ create policy "gestores criam config" on public.settings for insert to authentic
 drop policy if exists "membros veem notificacoes" on public.notifications;
 create policy "membros veem notificacoes" on public.notifications for select to authenticated
   using (public.is_member());
+
+-- templates (todos do time leem; owner e admin criam, editam e excluem)
+drop policy if exists "membros veem templates"   on public.templates;
+drop policy if exists "gestores criam templates" on public.templates;
+drop policy if exists "gestores editam templates" on public.templates;
+drop policy if exists "gestores excluem templates" on public.templates;
+create policy "membros veem templates" on public.templates for select to authenticated
+  using (public.is_member());
+create policy "gestores criam templates" on public.templates for insert to authenticated
+  with check (public.is_mgr());
+create policy "gestores editam templates" on public.templates for update to authenticated
+  using (public.is_mgr()) with check (public.is_mgr());
+create policy "gestores excluem templates" on public.templates for delete to authenticated
+  using (public.is_mgr());
 
 -- avatars
 drop policy if exists "membros veem avatares" on public.avatars;

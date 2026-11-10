@@ -500,6 +500,32 @@ select.pill:hover,select.tag:hover{filter:brightness(1.15)}
 .h3-row{display:flex;align-items:center;gap:10px;margin:0 0 8px}
 .h3-row h3{margin:0}
 
+/* ===== notificar: destinatário, modelos do time ===== */
+.to-line{display:flex;align-items:center;gap:8px;padding:9px 12px;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--input);font-size:13.5px;animation:slideUp .35s ease backwards}
+.to-line b{color:var(--strong);font-weight:600}
+.to-line svg{flex:none;color:var(--muted)}
+.tpl-add{display:flex;align-items:center;gap:7px;width:100%;margin-top:6px;padding:9px 10px;border:1.5px dashed var(--line-2);border-radius:8px;background:none;color:var(--muted);font-size:13px;text-align:left;position:relative;z-index:1;transition:color .2s,border-color .2s,background-color .2s,transform .15s;animation:ddItem .3s ease backwards;animation-delay:calc(var(--i,0)*35ms + 80ms)}
+.tpl-add:hover{color:var(--strong);border-color:var(--blue);background:rgba(var(--blue-rgb),.06)}
+.tpl-add:active{transform:scale(.98)}
+.tpl-add svg{transition:transform .35s cubic-bezier(.2,1.4,.4,1)}
+.tpl-add:hover svg{transform:rotate(90deg)}
+.tpl-add.on{color:var(--strong);border-style:solid;border-color:transparent}
+.var-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.var-chip{border:1px solid var(--line);background:var(--input);color:var(--text);border-radius:999px;padding:3px 10px;font-size:12px;transition:background-color .15s,border-color .15s,transform .12s;animation:ddItem .3s ease backwards}
+.var-chip:hover{border-color:var(--blue);background:rgba(var(--blue-rgb),.08)}
+.var-chip:active{transform:scale(.92)}
+#tpl-text{min-height:170px}
+#tpl-live{min-height:0}
+#tpl-live pre{color:var(--text)}
+.danger-txt{color:var(--danger)}
+.auto-banner{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:0 0 14px;border-radius:10px;background:var(--st-concluida);color:var(--st-concluida-i);font-size:13.5px;animation:warnIn .5s cubic-bezier(.2,1.2,.3,1) backwards}
+.auto-banner span{flex:1}
+.auto-banner .btn{color:inherit}
+#ntf-main.swap-in{animation:swapIn .3s cubic-bezier(.2,.9,.3,1)}
+.sheet-nav .tpl{align-items:flex-start;text-align:left}
+.sheet-nav .tpl small{text-align:left}
+@media (max-width:720px){.tpl-add{width:auto;flex:0 0 auto;margin:0;white-space:nowrap}}
+
 /* ===== armazenamento ===== */
 .sheet-main.swap-in{animation:swapIn .32s cubic-bezier(.2,.9,.3,1)}
 .meter{padding:16px 0;border-top:1px solid var(--line);animation:slideUp .4s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--n,0)*70ms + 60ms)}
@@ -601,7 +627,7 @@ const CAPACITY_WARNING = 'Nosso time está com a capacidade no limite neste mome
 /* Modelos de notificação enviados pelo SeaTalk. Variáveis: {numero} {nome} {status} {prazo} {responsavel}
    {complexidade} {solicitante} {link_agenda} {remetente} {time}. Trechos entre [colchetes] pedem edição antes do envio. */
 const TEMPLATES = [
-  {id:'atualizacao', label:'Atualização da solicitação', hint:'Status, responsável e prazo atuais',
+  {id:'atualizacao', label:'Atualização', hint:'Status, responsável e prazo atuais',
    text:`Olá! Passando para dar uma atualização sobre a sua solicitação #{numero} – {nome}.
 
 Status atual: {status}
@@ -609,49 +635,12 @@ Responsável: {responsavel}
 Prazo previsto: {prazo}
 
 Qualquer dúvida, é só responder por aqui.
-— {remetente}, {time}`},
-  {id:'reuniao', label:'Agendar reunião de alinhamento', hint:'Envia o link da agenda do time',
-   text:`Olá! Para avançarmos com a solicitação #{numero} – {nome}, gostaríamos de marcar uma conversa rápida de alinhamento.
-
-Você pode escolher um horário direto na agenda do time: {link_agenda}
-
-Se preferir, me diga os horários que funcionam melhor para você.
-— {remetente}, {time}`},
-  {id:'info', label:'Solicitar informações adicionais', hint:'Lista o que falta para seguir',
-   text:`Olá! Estamos analisando a solicitação #{numero} – {nome} e precisamos de algumas informações adicionais para seguir:
-
-• [descreva aqui o que você precisa]
-
-Assim que tivermos esses detalhes, retomamos o andamento. Obrigado!
-— {remetente}, {time}`},
-  {id:'recado', label:'Recado', hint:'Mensagem livre sobre a solicitação',
-   text:`Olá! Um recado rápido sobre a solicitação #{numero} – {nome}:
-
-[escreva o recado aqui]
-
-— {remetente}, {time}`},
-  {id:'imprevisto', label:'Imprevisto no prazo', hint:'Avisa que o prazo pode mudar',
-   text:`Olá! Tivemos um imprevisto no andamento da solicitação #{numero} – {nome} e o prazo previsto ({prazo}) pode sofrer alteração.
-
-Estamos trabalhando para minimizar o impacto e avisamos assim que tivermos uma nova previsão. Agradecemos a compreensão.
-— {remetente}, {time}`},
-  {id:'concluida', label:'Solicitação concluída', hint:'Entrega e próximos passos',
-   text:`Boa notícia! A solicitação #{numero} – {nome} foi concluída.
-
-[cole aqui o link ou as instruções de acesso à entrega]
-
-Se precisar de ajustes, é só nos chamar.
-— {remetente}, {time}`},
-  {id:'nps', label:'Pesquisa de satisfação (NPS)', hint:'Em breve: avaliação do atendimento', soon:true,
-   text:`Olá! A solicitação #{numero} – {nome} foi finalizada e queremos saber como foi a sua experiência.
-
-De 0 a 10, o quanto você recomendaria o time de {time}? Responda em: [link da pesquisa]
 — {remetente}, {time}`}
 ];
-const TARGETS = [
-  {id:'dm', label:'Solicitante', desc:'Mensagem direta pelo bot', icon:'person'},
-  {id:'group', label:'Grupo da solicitação', desc:'Grupo do SeaTalk vinculado à tarefa', icon:'group'},
-  {id:'webhook', label:'Canal do time', desc:'Grupo de avisos (webhook)', icon:'hash'}
+/* variáveis que os modelos podem usar (inseridas com um clique no editor de modelos) */
+const TPL_VARS = [
+  ['numero','Número'], ['nome','Nome do projeto'], ['status','Status'], ['prazo','Prazo'], ['responsavel','Responsável'],
+  ['complexidade','Complexidade'], ['solicitante','E-mail do solicitante'], ['remetente','Seu nome'], ['time','Nome do time']
 ];
 
 
@@ -672,7 +661,6 @@ function mockClient(){
     const due = created + SLA_MS[cx];
     tasks.push({
       id: crypto.randomUUID(), number: ++num, name, requester_email:'recruiter'+num+'@shopee.com',
-      seatalk_group_id: num%4===0 ? 'NjU0MzIxMDk4NzY1' + num : null,
       impacted_structures:'Recrutamento Brasil, TA Tech', project_type:type, needs_interaction: num%2===0,
       report_frequency:freq, report_channels: ch ? [].concat(ch) : [],
       description:'Contexto da solicitação.\nPrecisamos de uma solução para acompanhar os indicadores do time com atualização automática e visão por recruiter.',
@@ -702,10 +690,12 @@ function mockClient(){
   const notifications = [
     {id:crypto.randomUUID(), task_id:tasks[4].id, template:'atualizacao', channel:'dm', recipient:tasks[4].requester_email, status:'sent', sent_by:'victor.gsantana@shopee.com',
      content:'Olá! Passando para dar uma atualização sobre a sua solicitação #5 – Implementação do Inhire.\n\nStatus atual: Em andamento', created_at:new Date(now-3*D).toISOString()},
-    {id:crypto.randomUUID(), task_id:tasks[4].id, template:'reuniao', channel:'group', recipient:tasks[4].seatalk_group_id, status:'sent', sent_by:'fellipe.menezes@shopee.com',
-     content:'Olá! Para avançarmos com a solicitação #5 – Implementação do Inhire, gostaríamos de marcar uma conversa rápida de alinhamento.', created_at:new Date(now-9*D).toISOString()}
+    {id:crypto.randomUUID(), task_id:tasks[4].id, template:'atualizacao', channel:'dm', recipient:tasks[4].requester_email, status:'sent', sent_by:'fellipe.menezes@shopee.com',
+     content:'Olá! Passando para dar uma atualização sobre a sua solicitação #5 – Implementação do Inhire.\n\nStatus atual: Em análise', created_at:new Date(now-9*D).toISOString()}
   ];
-  const db = {profiles, tasks, avatars:[], settings, notifications}; const blobs = {};
+  const templates = [{id:crypto.randomUUID(), label:'Pedido de acesso à base', created_by:'victor.gsantana@shopee.com', created_at:new Date(now-5*D).toISOString(),
+    text:'Olá! Para seguir com a solicitação #{numero} – {nome}, precisamos de acesso à base de origem.\n\nPode liberar o acesso de leitura para {remetente}?\n— {time}'}];
+  const db = {profiles, tasks, avatars:[], settings, notifications, templates}; const blobs = {};
   const me = () => profiles.find(p => p.email === MOCK.email);
   const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -799,13 +789,12 @@ function mockClient(){
     /* simula a função serverless /api/seatalk */
     demoNotify: async p => {
       await new Promise(r => setTimeout(r, 900));
-      if(p.target === 'group' && !p.group_id) return {ok:false, error:'Esta solicitação não tem um grupo do SeaTalk vinculado. Edite a solicitação e informe o ID do grupo.'};
       const t = tasks.find(x => x.id === p.task_id);
-      notifications.unshift({id:crypto.randomUUID(), task_id:p.task_id, template:p.template, channel:p.target, status:'sent', sent_by: me() && me().email,
-        recipient: p.target === 'dm' ? t.requester_email : p.target === 'group' ? p.group_id : 'canal do time', content:p.text, created_at:new Date().toISOString()});
-      return {ok:true, channel:p.target, recipient: notifications[0].recipient, demo:true};
+      notifications.unshift({id:crypto.randomUUID(), task_id:p.task_id, template:p.template, channel:'dm', status:'sent', sent_by: me() && me().email,
+        recipient: t.requester_email, content:p.text, created_at:new Date().toISOString()});
+      return {ok:true, channel:'dm', recipient: t.requester_email, demo:true};
     },
-    demoCaps: {dm:true, group:true, webhook:true},
+    demoCaps: {dm:true},
     auth: {
       getSession: async () => ({data:{session: MOCK.email ? {user:{id:'u-'+MOCK.email, email:MOCK.email}} : null}}),
       signOut: async () => { MOCK.email = null; emit('SIGNED_OUT', null); return {error:null}; },
@@ -858,7 +847,7 @@ async function loadConfig(){
 
 const S = {session:null, me:null, tasks:[], profiles:[], view:'lista', f:{q:'', assignee:'all', done:true},
            openId:null, urls:{}, pending:false, channel:null, avatars:{}, avatarPaths:{},
-           settings:{...DEFAULT_SETTINGS}, notifs:{}, notifyCaps:null, modal:null};
+           settings:{...DEFAULT_SETTINGS}, notifs:{}, notifyCaps:null, modal:null, templates:[]};
 
 /* ===================== UTIL ===================== */
 const $ = (s, r=document) => r.querySelector(s);
@@ -933,6 +922,7 @@ I.undo = ic24('<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.1
 I.x = ic24('<path d="M18 6L6 18M6 6l12 12"/>', '', 16);
 I.flame = ic24('<path d="M12 22c4.4 0 7-2.8 7-7 0-3-2-5.5-3.5-7.5-.4 1.6-1.3 2.6-2.5 3C13 8 12 5.3 11 2c-3.5 2.5-6 6.6-6 10.5C5 18 7.6 22 12 22z"/><path d="M12 22c-2 0-3.2-1.4-3.2-3.2 0-1.5.9-2.7 1.9-3.8.4 1 1 1.6 1.8 1.9.6-1 .5-2.3.3-3.4 1.6 1.2 2.7 2.8 2.7 4.6 0 2.1-1.4 3.9-3.5 3.9z"/>', 'i-flame', 16);
 I.hash = ic24('<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>', 'ic', 14);
+I.plus = ic24('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>', '', 14);
 I.disk = ic24('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>', '', 15);
 I.refresh = ic24('<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>', 'i-refresh', 14);
 I.sliders = ic24('<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', '', 15);
@@ -1166,15 +1156,17 @@ async function submitRequest(form){
 
 /* ===================== DADOS ===================== */
 async function loadAll(){
-  const [p, t, c] = await Promise.all([
+  const [p, t, c, tp] = await Promise.all([
     sb.from('profiles').select('*').order('name'),
     sb.from('tasks').select('*').order('created_at', {ascending:false}).limit(3000),
-    sb.from('settings').select('*').eq('id', 1).maybeSingle()
+    sb.from('settings').select('*').eq('id', 1).maybeSingle(),
+    sb.from('templates').select('*').order('created_at')
   ]);
   if(p.error || t.error){ toast('Erro ao carregar dados: ' + (p.error||t.error).message, 'err'); }
   S.profiles = p.data || [];
   S.tasks = t.data || [];
   S.settings = {...DEFAULT_SETTINGS, ...(c.data || {})};
+  S.templates = (tp && tp.data) || [];   // modelos criados pelo time (tabela templates)
   const em = (S.session.user.email||'').toLowerCase();
   S.me = S.profiles.find(x => x.email === em && x.active) || null;
   if(S.me) await loadAvatars();
@@ -1197,6 +1189,11 @@ async function patchTask(id, patch){
     return;
   }
   Object.assign(t, data); render();
+  // avançou no processo: abre a janela de notificação já com o modelo de atualização
+  const pos = st => STATUS.findIndex(x => x.id === st);
+  if('status' in patch && isMgr() && pos(data.status) > pos(before.status)){
+    setTimeout(() => { if(!S.modal && byId(id)) openNotify(id, {from: before.status, to: data.status}); }, REDUCE ? 0 : 450);
+  }
 }
 
 function moveTask(id, status){
@@ -1449,7 +1446,6 @@ function renderDrawer(){
       ${prop(I.text,'Interação com outros times',t.needs_interaction?'Sim':'Não')}
       ${prop(I.text,'Reports periódicos',esc(t.report_frequency) + ((t.report_channels && t.report_channels.length) ? ', via ' + t.report_channels.map(esc).join(', ') : ''))}
       ${prop(I.person,'Solicitante',`<a href="mailto:${esc(t.requester_email)}">${esc(t.requester_email)}</a>`)}
-      ${t.seatalk_group_id ? prop(I.hash,'Grupo no SeaTalk',`<span class="chip" title="ID do grupo usado nas notificações">${esc(t.seatalk_group_id)}</span>`) : ''}
       ${prop(I.cal,'Aberta em',fmtDT(t.created_at))}
       <hr>
       <h3>Descrição</h3><p class="desc">${esc(t.description)}</p>
@@ -1480,9 +1476,11 @@ const shortName = email => { const p = S.profiles.find(x => x.email === email); 
 function notifsHTML(list){
   if(!list.length) return '<span class="muted">Nenhuma notificação enviada ainda.</span>';
   return list.map((n, i) => {
-    const tpl = TEMPLATES.find(x => x.id === n.template), ch = TARGETS.find(x => x.id === n.channel);
+    const tpl = allTemplates().find(x => x.id === n.template);
+    const label = tpl ? tpl.label : (/^[0-9a-f-]{36}$/i.test(n.template) ? 'Modelo removido' : n.template);
+    const ch = {group:'Grupo', webhook:'Canal do time'}[n.channel];   // envios antigos, de antes de o envio ser só direto
     return `<details class="notif${n.status === 'failed' ? ' failed' : ''}" style="--i:${Math.min(i, 10)}">
-      <summary><b>${esc(tpl ? tpl.label : n.template)}</b><span class="chip">${esc(ch ? ch.label : n.channel)}</span>${n.status === 'failed' ? '<span class="chip err">Falhou</span>' : ''}<span class="when">${fmtDT(n.created_at)}${n.sent_by ? ' · ' + esc(shortName(n.sent_by)) : ''}</span></summary>
+      <summary><b>${esc(label)}</b>${ch ? `<span class="chip">${ch}</span>` : ''}${n.status === 'failed' ? '<span class="chip err">Falhou</span>' : ''}<span class="when">${fmtDT(n.created_at)}${n.sent_by ? ' · ' + esc(shortName(n.sent_by)) : ''}</span></summary>
       <pre>${esc(n.content)}${n.error ? '\n\nErro: ' + esc(n.error) : ''}</pre></details>`;
   }).join('');
 }
@@ -1558,9 +1556,9 @@ document.addEventListener('click', async e => {
   const stp = t.closest('[data-step]');
   if(stp){ const k = stp.dataset.step; changeSetting({[k]: Math.max(0, (S.settings[k] || 0) + Number(stp.dataset.d))}); return; }
   const tp = t.closest('.tpl[data-tpl]');
-  if(tp){ if(!tp.disabled && S.ntf && S.ntf.tpl !== tp.dataset.tpl){ Object.assign(S.ntf, {tpl:tp.dataset.tpl, text:null, editing:false, err:'', swap:true}); renderNotify(); } return; }
-  const tg = t.closest('.tgt[data-target]');
-  if(tg){ if(!tg.disabled && S.ntf){ S.ntf.target = tg.dataset.target; S.ntf.err = ''; renderNotify(); } return; }
+  if(tp){ if(S.ntf && (S.ntf.editor || S.ntf.tpl !== tp.dataset.tpl)){ Object.assign(S.ntf, {tpl:tp.dataset.tpl, text:null, editing:false, err:'', swap:true, editor:null}); renderNotify(); } return; }
+  const vc = t.closest('[data-var]');
+  if(vc){ insertVar(vc.dataset.var); return; }
   const a = t.closest('[data-action]'); if(!a) return;
   const act = a.dataset.action, id = a.dataset.id;
   if(act === 'open'){
@@ -1580,8 +1578,11 @@ document.addEventListener('click', async e => {
   else if(act === 'ntf-done'){ const ta = $('#ntf-text'); if(ta) S.ntf.text = ta.value; S.ntf.editing = false; renderNotify(); }
   else if(act === 'ntf-reset'){ Object.assign(S.ntf, {text:null, editing:false, err:'', swap:true}); renderNotify(); }
   else if(act === 'ntf-send'){ sendNotification(); }
-  else if(act === 'ntf-list-groups'){ listGroups(); }
-  else if(act === 'ntf-use-group'){ const sel = $('#grp-sel'); if(sel && sel.value){ const tk = byId(S.ntf.taskId); S.ntf.groups = null; await patchTask(tk.id, {seatalk_group_id: sel.value}); renderNotify(); } }
+  else if(act === 'tpl-new'){ openTplEditor(null); }
+  else if(act === 'tpl-edit'){ openTplEditor(curTpl()); }
+  else if(act === 'tpl-cancel'){ Object.assign(S.ntf, {editor:null, swap:true}); renderNotify(); }
+  else if(act === 'tpl-save'){ saveTemplate(); }
+  else if(act === 'tpl-delete'){ deleteTemplate(); }
   else if(act === 'copy-form'){
     try{ await navigator.clipboard.writeText(formUrl()); toast('Link do formulário copiado.'); }
     catch{ toast(formUrl()); }
@@ -1634,6 +1635,8 @@ document.addEventListener('change', e => {
 document.addEventListener('input', e => {
   if(e.target.id === 'q'){ S.f.q = e.target.value; renderContent(); }
   else if(e.target.id === 'ntf-text' && S.ntf){ S.ntf.text = e.target.value; }
+  else if(e.target.id === 'tpl-text' && S.ntf && S.ntf.editor){ S.ntf.editor.text = e.target.value; updateTplLive(); }
+  else if(e.target.id === 'tpl-label' && S.ntf && S.ntf.editor){ S.ntf.editor.label = e.target.value; }
 });
 
 /* ondulacao nos botoes */
@@ -1916,7 +1919,8 @@ async function saveSettings(){
 }
 
 /* ===================== NOTIFICAR PELO SEATALK ===================== */
-const curTpl = () => TEMPLATES.find(x => x.id === (S.ntf && S.ntf.tpl)) || TEMPLATES[0];
+const allTemplates = () => TEMPLATES.concat((S.templates || []).map(x => ({id:x.id, label:x.label, hint:'Modelo do time', text:x.text, custom:true})));
+const curTpl = () => allTemplates().find(x => x.id === (S.ntf && S.ntf.tpl)) || TEMPLATES[0];
 function fillTemplate(tpl, t){
   const a = prof(t.assignee_id);
   const vars = {numero:t.number, nome:t.name, status:stLabel(t.status), prazo:fmtDT(t.due_at), responsavel: a ? a.name : 'a definir',
@@ -1925,9 +1929,10 @@ function fillTemplate(tpl, t){
 }
 const hl = text => esc(text).replace(/\[[^\]\n]+\]/g, m => `<mark>${m}</mark>`);
 
-function openNotify(id){
+/* auto: {from, to} quando a janela abre porque a solicitação avançou de status */
+function openNotify(id, auto){
   const t = byId(id); if(!t || !isMgr()) return;
-  S.ntf = {taskId:id, tpl:'atualizacao', target:'dm', text:null, editing:false, busy:false, err:'', swap:false, groups:null, groupsBusy:false};
+  S.ntf = {taskId:id, tpl:'atualizacao', text:null, editing:false, busy:false, err:'', swap:false, auto: auto || null, editor:null};
   S.modal = 'notify';
   renderNotify();
   loadNotifyCaps();
@@ -1937,81 +1942,138 @@ async function loadNotifyCaps(){
   try{
     if(DEMO) S.notifyCaps = sb.demoCaps;
     else { const r = await fetch(NOTIFY_API); if(!r.ok) throw new Error(r.status); S.notifyCaps = await r.json(); }
-  }catch(e){ S.notifyCaps = {dm:false, group:false, webhook:false, offline:true}; }
+  }catch(e){ S.notifyCaps = {dm:false, offline:true}; }
   if(S.modal === 'notify') renderNotify();
 }
-function targetBtn(x, t){
-  const n = S.ntf, caps = S.notifyCaps;
-  let desc = x.desc, dis = false;
-  if(x.id === 'dm') desc = t.requester_email;
-  if(x.id === 'group') desc = t.seatalk_group_id ? 'ID ' + t.seatalk_group_id : 'Nenhum grupo vinculado';
-  if(caps){
-    if(caps.offline){ desc = 'Função /api/seatalk indisponível'; dis = true; }
-    else if(x.id === 'webhook' && !caps.webhook){ desc = 'Defina SEATALK_WEBHOOK_URL na Vercel'; dis = true; }
-    else if(x.id !== 'webhook' && !caps.dm){ desc = 'Defina SEATALK_APP_ID/SECRET na Vercel'; dis = true; }
-  }
-  return `<button type="button" class="tgt${n.target === x.id ? ' on' : ''}" data-target="${x.id}" ${dis ? 'disabled' : ''}><span class="rad"></span><span style="min-width:0"><b>${esc(x.label)}</b><small>${esc(desc)}</small></span></button>`;
+function recipientHTML(t){
+  const caps = S.notifyCaps;
+  const warn = !caps ? '' : caps.offline ? 'A função /api/seatalk não respondeu. Abra o REX pelo endereço da Vercel.'
+             : !caps.dm ? 'O bot do SeaTalk não está configurado. Defina SEATALK_APP_ID e SEATALK_APP_SECRET na Vercel.' : '';
+  return `<div class="to-line">${I.person}<span>Para <b>${esc(t.requester_email)}</b> <span class="muted">· mensagem direta no SeaTalk</span></span></div>
+    ${warn ? `<div class="fill-hint">${esc(warn)}</div>` : ''}`;
 }
-function groupPickHTML(){
-  const n = S.ntf;
-  return `<div class="group-pick" id="group-pick">
-    <span class="fine">Esta solicitação ainda não tem um grupo do SeaTalk vinculado.</span>
-    <button type="button" class="btn sm" data-action="ntf-list-groups" ${n.groupsBusy ? 'disabled' : ''}>${n.groupsBusy ? 'Buscando grupos...' : 'Listar grupos em que o bot está'}</button>
-    ${n.groups ? (n.groups.length
-      ? `<select class="in" id="grp-sel" aria-label="Grupo" style="width:auto;margin:0;display:inline-block">${n.groups.map(g => `<option value="${esc(g.id)}">${esc(g.name || g.id)}</option>`).join('')}</select><button type="button" class="btn sm primary" data-action="ntf-use-group">Vincular à solicitação</button>`
-      : '<span class="fine">O bot ainda não participa de nenhum grupo. Adicione o bot ao grupo no SeaTalk e tente de novo.</span>') : ''}
-  </div>`;
+function tplListHTML(n){
+  const list = allTemplates();
+  return `<nav class="sheet-nav tpl-list" id="tpl-list" aria-label="Modelos"><span class="tpl-ind" id="tpl-ind"></span>
+    ${list.map((x, i) => `<button type="button" class="tpl${!n.editor && x.id === n.tpl ? ' on' : ''}" data-tpl="${x.id}" style="--i:${i}"><b>${esc(x.label)}</b><small>${esc(x.hint)}</small></button>`).join('')}
+    <button type="button" class="tpl-add${n.editor && !n.editor.id ? ' on' : ''}" data-action="tpl-new" style="--i:${list.length}">${I.plus} Adicionar template</button>
+  </nav>`;
+}
+function editorHTML(n, t){
+  const e = n.editor;
+  return `<h3>${e.id ? 'Editar template' : 'Novo template'}</h3>
+    <p class="lead">Escreva a mensagem. As variáveis entre chaves são trocadas pelos dados da solicitação na hora do envio, e trechos entre [colchetes] ficam marcados para completar antes de enviar.</p>
+    <label class="f">Nome do template<input class="in" id="tpl-label" maxlength="80" value="${esc(e.label)}" placeholder="Ex.: Pedido de acesso à base"></label>
+    <p class="q" style="margin:4px 0 6px">Inserir variável</p>
+    <div class="var-chips">${TPL_VARS.map(([k, l]) => `<button type="button" class="var-chip" data-var="${k}" title="{${k}}">${esc(l)}</button>`).join('')}</div>
+    <div class="preview edit"><textarea id="tpl-text" aria-label="Texto do template" maxlength="3500">${esc(e.text)}</textarea></div>
+    <p class="q" style="margin:14px 0 6px">Como fica nesta solicitação</p>
+    <div class="preview" id="tpl-live"><pre>${hl(fillTemplate({text: e.text || ' '}, t))}</pre></div>
+    <div class="pv-tools">
+      ${e.id ? `<button type="button" class="btn ghost danger-txt" data-action="tpl-delete">${e.confirmDelete ? 'Confirmar exclusão' : 'Excluir template'}</button>` : ''}
+      <p class="msg" id="tpl-msg">${esc(e.err || '')}</p>
+      <button type="button" class="btn" data-action="tpl-cancel">Cancelar</button>
+      <button type="button" class="btn primary${e.busy ? ' busy' : ''}" data-action="tpl-save" ${e.busy ? 'disabled' : ''}>${e.busy ? 'Salvando...' : 'Salvar template'}</button>
+    </div>`;
 }
 function renderNotify(){
   const n = S.ntf; if(!n) return;
   const t = byId(n.taskId); if(!t){ closeModal(); return; }
-  const tpl = curTpl();
-  const text = n.text ?? fillTemplate(tpl, t);
-  const needsFill = /\[[^\]\n]+\]/.test(text);
-  const swap = n.swap; n.swap = false;
-  $('#modal').innerHTML = `<div class="scrim blur enter-in" data-action="close-modal" style="z-index:50"></div>
-  <div class="sheet" role="dialog" aria-modal="true" aria-label="Notificar pelo SeaTalk">
-    <div class="sheet-head">${I.bell}<h2>Notificar</h2><span class="sub">#${t.number} · ${esc(t.name)}</span><span class="spacer"></span><button class="xbtn" data-action="close-modal" aria-label="Fechar">${I.x}</button></div>
-    <div class="sheet-body">
-      <nav class="sheet-nav tpl-list" id="tpl-list" aria-label="Modelos"><span class="tpl-ind" id="tpl-ind"></span>
-        ${TEMPLATES.map((x, i) => `<button type="button" class="tpl${x.id === n.tpl ? ' on' : ''}" data-tpl="${x.id}" style="--i:${i}" ${x.soon ? 'disabled title="Plano futuro: o bot envia a pesquisa de satisfação ao concluir"' : ''}><b>${esc(x.label)}</b><small>${esc(x.hint)}</small>${x.soon ? '<span class="soon">em breve</span>' : ''}</button>`).join('')}
-      </nav>
-      <div class="sheet-main" id="ntf-main">
-        <h3>${esc(tpl.label)}</h3><p class="lead">Revise a mensagem, escolha o destino e envie pelo SeaTalk.</p>
-        <div class="tgts">${TARGETS.map(x => targetBtn(x, t)).join('')}</div>
-        ${needsFill && !n.editing ? `<div class="fill-hint">${I.edit} Este modelo tem trechos entre [colchetes] para você completar antes de enviar.</div>` : ''}
-        <div class="preview${n.editing ? ' edit' : ''}${swap ? ' swap' : ''}" id="preview">${n.editing ? `<textarea id="ntf-text" aria-label="Mensagem">${esc(text)}</textarea>` : `<pre>${hl(text)}</pre>`}</div>
-        <div class="pv-tools">
-          ${n.editing ? `<button type="button" class="btn" data-action="ntf-done">${I.check(false,14)} Concluir edição</button>` : `<button type="button" class="btn" data-action="ntf-edit">${I.edit} Editar</button>`}
-          ${n.text !== null ? `<button type="button" class="btn ghost" data-action="ntf-reset">${I.undo} Restaurar modelo</button>` : ''}
-          <p class="msg" id="ntf-msg">${esc(n.err)}</p>
-          <button type="button" class="btn primary send${n.busy ? ' busy' : ''}${n.err ? ' shake' : ''}" data-action="ntf-send"><span class="sp"></span><span class="lbl">${I.send} Enviar pelo SeaTalk</span></button>
-        </div>
-        ${n.target === 'group' && !t.seatalk_group_id ? groupPickHTML() : ''}
-      </div>
-    </div>
-  </div>`;
+  const fresh = !$('#modal .sheet[data-sheet="notify"]');
+  if(fresh){
+    $('#modal').innerHTML = `<div class="scrim blur enter-in" data-action="close-modal" style="z-index:50"></div>
+    <div class="sheet" data-sheet="notify" role="dialog" aria-modal="true" aria-label="Notificar pelo SeaTalk">
+      <div class="sheet-head">${I.bell}<h2>Notificar</h2><span class="sub">#${t.number} · ${esc(t.name)}</span><span class="spacer"></span><button class="xbtn" data-action="close-modal" aria-label="Fechar">${I.x}</button></div>
+      <div class="sheet-body"><div id="tpl-slot" style="display:contents"></div><div class="sheet-main" id="ntf-main"></div></div>
+    </div>`;
+  }
+  $('#tpl-slot').innerHTML = tplListHTML(n);
+  const main = $('#ntf-main');
+  if(n.editor){
+    main.innerHTML = editorHTML(n, t);
+  } else {
+    const tpl = curTpl();
+    const text = n.text ?? fillTemplate(tpl, t);
+    const needsFill = /\[[^\]\n]+\]/.test(text);
+    const swap = n.swap; n.swap = false;
+    const canSend = !S.notifyCaps || (S.notifyCaps.dm && !S.notifyCaps.offline);
+    main.innerHTML = `
+      ${n.auto ? `<div class="auto-banner">${I.check(true,16)}<span>A solicitação avançou de <b>${esc(stLabel(n.auto.from))}</b> para <b>${esc(stLabel(n.auto.to))}</b>. Quer avisar o solicitante?</span><button type="button" class="btn sm ghost" data-action="close-modal">Agora não</button></div>` : ''}
+      <div class="h3-row"><h3>${esc(tpl.label)}</h3><span class="spacer"></span>${tpl.custom ? `<button type="button" class="btn sm ghost" data-action="tpl-edit">${I.edit} Editar template</button>` : ''}</div>
+      <p class="lead">Revise a mensagem e envie pelo SeaTalk.</p>
+      ${recipientHTML(t)}
+      ${needsFill && !n.editing ? `<div class="fill-hint">${I.edit} Este modelo tem trechos entre [colchetes] para você completar antes de enviar.</div>` : ''}
+      <div class="preview${n.editing ? ' edit' : ''}${swap ? ' swap' : ''}" id="preview">${n.editing ? `<textarea id="ntf-text" aria-label="Mensagem">${esc(text)}</textarea>` : `<pre>${hl(text)}</pre>`}</div>
+      <div class="pv-tools">
+        ${n.editing ? `<button type="button" class="btn" data-action="ntf-done">${I.check(false,14)} Concluir edição</button>` : `<button type="button" class="btn" data-action="ntf-edit">${I.edit} Editar mensagem</button>`}
+        ${n.text !== null ? `<button type="button" class="btn ghost" data-action="ntf-reset">${I.undo} Restaurar modelo</button>` : ''}
+        <p class="msg" id="ntf-msg">${esc(n.err)}</p>
+        <button type="button" class="btn primary send${n.busy ? ' busy' : ''}${n.err ? ' shake' : ''}" data-action="ntf-send" ${canSend ? '' : 'disabled'}><span class="sp"></span><span class="lbl">${I.send} Enviar pelo SeaTalk</span></button>
+      </div>`;
+    if(swap && !REDUCE){ main.classList.remove('swap-in'); void main.offsetWidth; main.classList.add('swap-in'); }
+  }
   requestAnimationFrame(moveTplInd);
   if(n.editing){ const ta = $('#ntf-text'); if(ta && !n.focused){ ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); n.focused = true; } }
   else n.focused = false;
+  if(n.editor && !n.editor.focused){ const el = n.editor.label ? $('#tpl-text') : $('#tpl-label'); if(el) el.focus(); n.editor.focused = true; }
 }
 function moveTplInd(){
-  const list = $('#tpl-list'), ind = $('#tpl-ind'), on = list && list.querySelector('.tpl.on');
-  if(!list || !ind || !on) return;
+  const list = $('#tpl-list'), ind = $('#tpl-ind'), on = list && list.querySelector('.tpl.on, .tpl-add.on');
+  if(!list || !ind) return;
+  if(!on){ ind.classList.remove('show'); return; }
   ind.style.top = on.offsetTop + 'px'; ind.style.height = on.offsetHeight + 'px'; ind.classList.add('show');
 }
+
+/* ---------- modelos do time ---------- */
+function openTplEditor(x){
+  const n = S.ntf; if(!n) return;
+  n.editor = x ? {id:x.id, label:x.label, text:x.text} : {id:null, label:'', text:'Olá! Sobre a sua solicitação #{numero} – {nome}:\n\n[escreva aqui]\n\n— {remetente}, {time}'};
+  n.editing = false; n.err = '';
+  renderNotify();
+}
+function insertVar(k){
+  const ta = $('#tpl-text'); if(!ta || !S.ntf || !S.ntf.editor) return;
+  const tok = '{' + k + '}', a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? a;
+  ta.value = ta.value.slice(0, a) + tok + ta.value.slice(b);
+  ta.focus(); ta.setSelectionRange(a + tok.length, a + tok.length);
+  S.ntf.editor.text = ta.value; updateTplLive();
+}
+function updateTplLive(){
+  const n = S.ntf, box = $('#tpl-live pre'); if(!n || !n.editor || !box) return;
+  box.innerHTML = hl(fillTemplate({text: n.editor.text || ' '}, byId(n.taskId)));
+}
+async function saveTemplate(){
+  const n = S.ntf, e = n && n.editor; if(!e || e.busy) return;
+  e.label = ($('#tpl-label') || {}).value ?? e.label; e.text = ($('#tpl-text') || {}).value ?? e.text;
+  const label = e.label.trim(), text = e.text.trim();
+  if(!label){ e.err = 'Dê um nome ao template.'; return renderNotify(); }
+  if(!text){ e.err = 'Escreva o texto do template.'; return renderNotify(); }
+  if(allTemplates().some(x => x.id !== e.id && x.label.toLowerCase() === label.toLowerCase())){ e.err = 'Já existe um template com esse nome.'; return renderNotify(); }
+  e.busy = true; e.err = ''; renderNotify();
+  const row = {id: e.id || crypto.randomUUID(), label, text};
+  const {error} = await sb.from('templates').upsert(row);
+  e.busy = false;
+  if(error){ e.err = 'Não foi possível salvar: ' + error.message; return renderNotify(); }
+  const i = S.templates.findIndex(x => x.id === row.id);
+  if(i >= 0) S.templates[i] = {...S.templates[i], ...row}; else S.templates.push({...row, created_by: S.me && S.me.email, created_at: new Date().toISOString()});
+  Object.assign(n, {editor:null, tpl:row.id, text:null, swap:true});
+  renderNotify();
+  toast(i >= 0 ? 'Template atualizado.' : 'Template adicionado.');
+}
+async function deleteTemplate(){
+  const n = S.ntf, e = n && n.editor; if(!e || !e.id) return;
+  if(!e.confirmDelete){ e.confirmDelete = true; return renderNotify(); }
+  const {error} = await sb.from('templates').delete().eq('id', e.id);
+  if(error){ e.err = 'Não foi possível excluir: ' + error.message; e.confirmDelete = false; return renderNotify(); }
+  S.templates = S.templates.filter(x => x.id !== e.id);
+  Object.assign(n, {editor:null, tpl:'atualizacao', text:null, swap:true});
+  renderNotify();
+  toast('Template excluído.');
+}
+
 async function authHeaders(){
   const {data:{session}} = await sb.auth.getSession();
   return {'Content-Type':'application/json', Authorization:'Bearer ' + (session ? session.access_token : '')};
-}
-async function listGroups(){
-  const n = S.ntf; if(!n || n.groupsBusy) return;
-  n.groupsBusy = true; renderNotify();
-  try{
-    if(DEMO){ await new Promise(r => setTimeout(r, 700)); n.groups = [{id:'NjU0MzIxMDk4NzY1', name:'REX x Recrutamento Brasil'}, {id:'ODc2NTQzMjEwOTg3', name:'TA Tech - Dados'}]; }
-    else { const r = await fetch(NOTIFY_API + '?action=groups', {headers: await authHeaders()}); const j = await r.json(); if(!r.ok || j.error) throw new Error(j.error || r.status); n.groups = j.groups || []; }
-  }catch(e){ n.groups = null; n.err = 'Não foi possível listar os grupos: ' + e.message; }
-  n.groupsBusy = false; renderNotify();
 }
 async function sendNotification(){
   const n = S.ntf; if(!n || n.busy) return;
@@ -2022,9 +2084,8 @@ async function sendNotification(){
   const fail = msg => { n.err = msg; renderNotify(); };
   if(!text) return fail('Escreva a mensagem antes de enviar.');
   if(/\[[^\]\n]+\]/.test(text)) return fail('Complete os trechos entre [colchetes] antes de enviar.');
-  if(n.target === 'group' && !t.seatalk_group_id) return fail('Vincule um grupo do SeaTalk a esta solicitação para enviar ao grupo.');
   n.busy = true; n.err = ''; renderNotify();
-  const payload = {task_id:t.id, template:tpl.id, target:n.target, text, group_id:t.seatalk_group_id};
+  const payload = {task_id:t.id, template:tpl.id, text};
   let res;
   try{
     if(DEMO) res = await sb.demoNotify(payload);
@@ -2046,7 +2107,7 @@ async function sendNotification(){
 }
 const successPaneHTML = res => `<div class="success-pane"><div class="confetti"></div>
   <svg class="pop" width="58" height="58" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#2f9e6b"/><path class="tick" d="M5.8 10.4l2.7 2.7 5.7-5.9" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  <h3>Enviado</h3><p>${esc((TARGETS.find(x => x.id === res.channel) || {}).label || '')}${res.recipient ? ' · ' + esc(res.recipient) : ''}${res.demo ? ' (demonstração: nada foi enviado de verdade)' : ''}</p></div>`;
+  <h3>Enviado</h3><p>${res.recipient ? 'Para ' + esc(res.recipient) : ''}${res.demo ? ' (demonstração: nada foi enviado de verdade)' : ''}</p></div>`;
 function confettiBurst(box){
   if(!box || REDUCE) return;
   const colors = ['#2f9e6b', '#e0a52a', '#4f93ee', '#eb5757', '#9b7cf0', '#e8842a'];
@@ -2109,7 +2170,7 @@ function editFormHTML(t){
   return `<form id="f-edit" data-id="${t.id}" novalidate>
     <label class="f">Nome do projeto<input class="in" name="name" required maxlength="200" value="${esc(t.name)}"></label>
     <label class="f">E-mail do solicitante<input class="in" type="email" name="requester_email" required maxlength="200" value="${esc(t.requester_email)}"></label>
-    <label class="f">ID do grupo no SeaTalk <span class="fine">(opcional, para notificar o grupo da solicitação)</span><input class="in" name="seatalk_group_id" maxlength="120" value="${esc(t.seatalk_group_id || '')}" placeholder="Ex.: NjU0MzIxMDk4NzY1"></label>
+
     <label class="f">Estruturas impactadas<input class="in" name="impacted_structures" required maxlength="500" value="${esc(t.impacted_structures)}"></label>
     <label class="f">Tipo de projeto<select class="in" name="project_type">${TYPES.map(x=>`<option ${x===t.project_type?'selected':''}>${x}</option>`).join('')}</select></label>
     <p class="q">Interação com outros times</p>
@@ -2133,7 +2194,6 @@ function saveEdit(form){
   const patch = {
     name: String(fd.get('name')).trim(),
     requester_email: String(fd.get('requester_email')).trim().toLowerCase(),
-    seatalk_group_id: String(fd.get('seatalk_group_id') || '').trim() || null,
     impacted_structures: String(fd.get('impacted_structures')).trim(),
     project_type: fd.get('project_type'),
     needs_interaction: fd.get('e_needs') === 'Sim',

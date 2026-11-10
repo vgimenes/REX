@@ -11,7 +11,7 @@ Como as peças se conectam:
  navegador ──► Supabase  (login por código no e-mail, banco de dados, anexos, tempo real)
      │
      └──────► Vercel     (hospeda o site e a função /api/seatalk)
-                  └────► SeaTalk Open Platform (bot ou webhook → mensagem para o solicitante / grupo)
+                  └────► SeaTalk Open Platform (bot → mensagem direta para o solicitante)
 ```
 
 Arquivos do projeto:
@@ -35,7 +35,7 @@ Antes de configurar qualquer coisa, dá para ver tudo funcionando: abra `index.h
 
 - Conta no [Supabase](https://supabase.com) (plano gratuito serve para começar).
 - Conta no [GitHub](https://github.com) e na [Vercel](https://vercel.com) (entre na Vercel com o GitHub).
-- Acesso ao SeaTalk Desktop para criar o webhook ou o bot (passo 5).
+- Acesso ao open.seatalk.io para criar o bot (passo 5).
 - Nenhum programa instalado: tudo é feito pelos sites.
 
 Duas observações para um uso corporativo: o plano gratuito do Supabase pausa projetos sem acesso por 7 dias (com uso diário não acontece) e o plano Hobby da Vercel é para uso pessoal; para uso na empresa, verifique com a área responsável qual plano/infra usar. Os dados (e-mails de solicitantes, anexos) ficam no Supabase, então escolha a região e confira a política interna de dados.
@@ -136,8 +136,7 @@ Em **Project → Settings → Environment Variables**, crie (nomes exatamente co
 | `SUPABASE_ANON_KEY` | publishable/anon key (obrigatória: a tela usa) |
 | `SUPABASE_SERVICE_ROLE_KEY` | secret/service_role key (só as funções do SeaTalk e da limpeza) |
 | `CRON_SECRET` | um texto aleatório de 16+ caracteres que você inventa; protege a limpeza diária (passo 6) |
-| `SEATALK_WEBHOOK_URL` | webhook do grupo (passo 5A) – opcional |
-| `SEATALK_APP_ID` / `SEATALK_APP_SECRET` | credenciais do bot (passo 5B) – opcional |
+| `SEATALK_APP_ID` / `SEATALK_APP_SECRET` | credenciais do bot (passo 5.2) |
 
 Depois de salvar, vá em **Deployments → ⋯ → Redeploy**: as variáveis só entram em vigor em um deploy novo. Sem `SUPABASE_URL` e `SUPABASE_ANON_KEY` o site abre na tela "Falta configurar o Supabase".
 
@@ -150,53 +149,34 @@ Pronto: `https://SEU-SITE.vercel.app` é o REX e `https://SEU-SITE.vercel.app/so
 
 ## 5. SeaTalk (botão Notificar)
 
-O botão **Notificar** fica dentro da solicitação (topo da gaveta e na seção "Notificações enviadas"). Ele abre modelos prontos, preenchidos com os dados do projeto, e envia por um de três destinos:
+O botão **Notificar** (topo da gaveta da solicitação e seção "Notificações enviadas") abre a janela de envio. A mensagem vai sempre direto para o SeaTalk do solicitante, enviada pelo bot do time. A janela também abre sozinha quando owner ou admin avança uma solicitação no processo (por exemplo, de *Em análise* para *Em andamento*, pela lista, pelo kanban ou pela edição), já com o modelo **Atualização** preenchido; é só revisar e enviar, ou clicar em *Agora não*. Voltar uma etapa não abre a janela.
 
-| Destino no pop-up | O que é | O que precisa |
-| --- | --- | --- |
-| Canal do time | Avisa um grupo do SeaTalk onde o time (e, se quiser, os solicitantes) está | Webhook do grupo (5A) |
-| Grupo da solicitação | Grupo do SeaTalk específico daquela solicitação, vinculado na tarefa | Bot (5B) adicionado ao grupo |
-| Solicitante | Mensagem direta para quem pediu | Bot (5B) + permissão de admin + solicitante assinante do bot |
+Na lista lateral fica o modelo padrão **Atualização** e os templates do time. **Adicionar template** abre um editor com nome, texto e botões para inserir variáveis (número, nome do projeto, status, prazo, responsável…), com uma prévia de como a mensagem fica naquela solicitação. Templates do time podem ser editados ou excluídos pelo botão *Editar template*; ficam salvos no banco e aparecem para todos os owners e admins.
 
-Comece pelo 5A: funciona em minutos e não depende de ninguém. O 5B pode vir depois.
+### 5.1 Conferir a configuração
+Abra `https://SEU-SITE.vercel.app/api/seatalk`. A resposta `{"dm":true}` significa que o bot está configurado; `{"dm":false}` significa que faltam as variáveis do passo 5.2.
 
-### 5.0 Ver o que já está configurado
-Abra `https://SEU-SITE.vercel.app/api/seatalk` no navegador. A resposta diz o que a Vercel enxerga, sem expor segredos: `{"dm":false,"group":false,"webhook":true}` significa só o webhook configurado. O pop-up Notificar usa essa mesma resposta para habilitar ou apagar cada destino.
-
-### 5A. Webhook de grupo (destino "Canal do time")
-1. No **SeaTalk Desktop**, abra o grupo (ou crie um, ex.: "REX - Avisos", com o time e os solicitantes frequentes).
-2. Configurações do grupo → **System Accounts** → **Add System Account**. Se a opção não aparecer, peça ao dono do grupo para te tornar admin do grupo ou criar a conta.
-3. Nome `REX`, confirme e copie a **Webhook URL**: `https://openapi.seatalk.io/webhook/group/...`
-4. Na Vercel: **Settings → Environment Variables** → `SEATALK_WEBHOOK_URL` = essa URL → Save.
-5. **Deployments → ⋯ no último deploy → Redeploy**. Espere terminar.
-6. Confira em `/api/seatalk`: `"webhook":true`.
-7. No REX, abra uma solicitação de teste → **Notificar** → destino **Canal do time** → modelo *Recado* → edite o texto entre [colchetes] → **Enviar pelo SeaTalk**. A mensagem chega ao grupo com o número e o nome da solicitação e o e-mail do solicitante.
-
-Limite do SeaTalk: 60 mensagens por minuto por webhook.
-
-### 5B. Bot (destinos "Grupo da solicitação" e "Solicitante")
-1. Acesse https://open.seatalk.io (no computador, com a conta da empresa) → **Create App**. Nome `REX`, descrição e ícone.
+### 5.2 Criar e configurar o bot
+1. Acesse https://open.seatalk.io com a conta da empresa → **Create App**, nome `REX`.
 2. Ative a capacidade **Bot**.
-3. Em **Basic Info & Credentials**, copie **App ID** e **App Secret**.
-4. Em permissões (*Permissions*/*Scopes*), solicite: **Send Message to Group Chat**, **Send Message to Bot Subscriber** e **Get Employee Code with Email**. As duas últimas, pela experiência interna da Shopee, dependem de aprovação do administrador do SeaTalk; a de grupo costuma ser liberada de imediato.
-5. Publique o app (**Release**/**Online**). Enquanto estiver *Offline*, o REX mostra "O app do SeaTalk não está online".
-6. Na Vercel: `SEATALK_APP_ID` e `SEATALK_APP_SECRET` → Save → Redeploy. Confira em `/api/seatalk`: `"dm":true,"group":true`.
-7. **Grupo da solicitação**: no SeaTalk, adicione o bot `REX` como membro do grupo daquela solicitação. No REX, abra a solicitação → **Notificar** → **Grupo da solicitação** → **Listar grupos em que o bot está** → escolha o grupo → **Vincular à solicitação**. A partir daí o grupo fica salvo na tarefa (também aparece em **Editar → ID do grupo no SeaTalk**).
-8. **Solicitante** (mensagem direta): só funciona com a permissão *Get Employee Code with Email* aprovada e com o solicitante tendo assinado o bot: ele busca `REX` em *Bots* no SeaTalk, abre e clica em **Subscribe**. Teste primeiro com você mesmo: crie uma solicitação com o seu e-mail, assine o bot e envie.
+3. Em **Basic Info & Credentials**, copie **App ID** e **App Secret** → Vercel: `SEATALK_APP_ID` e `SEATALK_APP_SECRET` → Save → Redeploy.
+4. Em permissões, solicite **Send Message to Bot Subscriber** e **Get Employee Code with Email** (a segunda converte o e-mail do solicitante em destinatário e pode depender de aprovação do admin do SeaTalk).
+5. Em disponibilidade/alcance do app, deixe **todos os funcionários**. Quem estiver fora do alcance não recebe mensagens e nem encontra o bot.
+6. Publique o app (**Online**).
+7. Os solicitantes precisam **assinar o bot** uma vez: no SeaTalk, *Bots* → `REX` → **Subscribe**. Vale incluir isso na divulgação do formulário.
 
-### 5C. Testar e diagnosticar
-O resultado de cada envio fica em "Notificações enviadas" dentro da solicitação, inclusive quando falha, com o motivo em português. Detalhes técnicos: **Vercel → Project → Logs**, função `/api/seatalk`.
+### 5.3 Diagnosticar
+O resultado de cada envio fica em "Notificações enviadas" dentro da solicitação, inclusive quando falha, com o motivo. Detalhes técnicos: **Vercel → Project → Logs**, função `/api/seatalk`.
 
 | Mensagem no REX | Causa | O que fazer |
 | --- | --- | --- |
-| Função /api/seatalk indisponível | Site aberto fora da Vercel ou deploy antigo | Use o endereço da Vercel; redeploy |
-| Defina SEATALK_… na Vercel | Variável faltando ou sem redeploy | Passos 5A.4–5 / 5B.6 |
-| O bot não tem permissão para esta ação (103) | Permissão não aprovada | Passo 5B.4; use o grupo enquanto espera |
-| O app do SeaTalk não está online (105) | App não publicado | Passo 5B.5 |
-| O destinatário ainda não assinou o bot (3002) | Solicitante não assinou | Passo 5B.8 |
-| Não encontrei … no SeaTalk | E-mail diferente do cadastrado no SeaTalk | Corrija o e-mail em **Editar** |
-| Esta solicitação não tem um grupo vinculado | Falta vincular o grupo | Passo 5B.7 |
-| O webhook do SeaTalk recusou a mensagem | URL errada ou conta do sistema removida do grupo | Gere uma nova URL (5A.3) |
+| A função /api/seatalk não respondeu | Site aberto fora da Vercel ou deploy antigo | Use o endereço da Vercel; redeploy |
+| O bot do SeaTalk não está configurado | Faltam `SEATALK_APP_ID`/`SEATALK_APP_SECRET` ou o redeploy | Passo 5.2, item 3 |
+| O bot não tem permissão para esta ação (103) | Permissão não aprovada | Passo 5.2, item 4 |
+| O app do SeaTalk não está online (105) | App não publicado | Passo 5.2, item 6 |
+| O SeaTalk não reconhece este solicitante… (3001) | Solicitante fora do alcance do bot, ou e-mail diferente do usado no SeaTalk | Passo 5.2, item 5; confira o e-mail |
+| O destinatário ainda não assinou o bot (3002) | Solicitante não assinou | Passo 5.2, item 7 |
+| Não encontrei … no SeaTalk | E-mail não existe no diretório | Corrija o e-mail em **Editar** |
 
 ---
 
@@ -224,10 +204,8 @@ O resultado de cada envio fica em "Notificações enviadas" dentro da solicitaç
 | Entra, mas a tela diz "Sem acesso" | Perfil desativado ou e-mail diferente do cadastrado | Reative na aba Equipe / confira o e-mail |
 | Link do e-mail abre em "localhost" ou erro de redirect | URL não autorizada | Passo 2.3, item 3 (Redirect URLs) |
 | Formulário não envia anexos | Bucket `anexos` não existe ou políticas não rodaram | Rode o `schema.sql` de novo |
-| Notificar: "Função /api/seatalk indisponível" | Site aberto fora da Vercel (arquivo local) ou deploy antigo | Use o endereço da Vercel; faça redeploy |
-| Notificar: "Defina SEATALK_… na Vercel" | Variável faltando | Passo 4.3 + redeploy |
-| "O bot não tem permissão para esta ação" (103) | Permissão não habilitada/aprovada no SeaTalk | Passo 5B, item 3 |
-| "O destinatário ainda não assinou o bot" (3002) | Solicitante não abriu o bot | Passo 5B, item 5, ou use o canal do time |
+| "O bot não tem permissão para esta ação" (103) | Permissão não habilitada/aprovada no SeaTalk | Passo 5.2, item 4 |
+| "O destinatário ainda não assinou o bot" (3002) | Solicitante não assinou o bot | Passo 5.2, item 7 |
 | Painel não atualiza sozinho | Tempo real desligado | Rode o bloco 8c do `schema.sql`; em **Database → Publications**, `supabase_realtime` deve incluir `tasks` e `settings` |
 
 ---
