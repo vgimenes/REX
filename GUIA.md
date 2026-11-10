@@ -22,6 +22,7 @@ Arquivos do projeto:
 | `banner.jpg` | Imagem do topo. |
 | `api/config.js` | Entrega à tela a URL e a chave pública do Supabase lidas das variáveis da Vercel. Nenhuma chave fica no HTML. |
 | `api/seatalk.js` | Função serverless que envia as mensagens pelo SeaTalk sem expor segredos. |
+| `api/cleanup.js` | Limpeza diária: apaga os anexos de solicitações concluídas há mais de 30 dias. |
 | `supabase/schema.sql` | Cria tabelas, permissões, buckets de arquivos e funções no Supabase. |
 | `vercel.json` | Faz `/solicitar` abrir o formulário e adiciona cabeçalhos de segurança. |
 | `.env.example` | Lista das variáveis de ambiente da Vercel. |
@@ -133,7 +134,8 @@ Em **Project → Settings → Environment Variables**, crie (nomes exatamente co
 | --- | --- |
 | `SUPABASE_URL` | Project URL do Supabase (obrigatória: a tela usa) |
 | `SUPABASE_ANON_KEY` | publishable/anon key (obrigatória: a tela usa) |
-| `SUPABASE_SERVICE_ROLE_KEY` | secret/service_role key (só a função do SeaTalk) |
+| `SUPABASE_SERVICE_ROLE_KEY` | secret/service_role key (só as funções do SeaTalk e da limpeza) |
+| `CRON_SECRET` | um texto aleatório de 16+ caracteres que você inventa; protege a limpeza diária (passo 6) |
 | `SEATALK_WEBHOOK_URL` | webhook do grupo (passo 5A) – opcional |
 | `SEATALK_APP_ID` / `SEATALK_APP_SECRET` | credenciais do bot (passo 5B) – opcional |
 
@@ -202,6 +204,9 @@ O resultado de cada envio fica em "Notificações enviadas" dentro da solicitaç
 
 - **Equipe** (aba visível para owner/admin): adicionar pessoas pelo e-mail corporativo. A pessoa entra com esse e-mail e recebe o código. Desativar alguém bloqueia o acesso na hora.
 - **Configurações** (engrenagem no topo, owner/admin): limites de tasks de alta e média complexidade, total em aberto e o **Modo Burnout**. Quando um limite é ultrapassado ou o Burnout está ligado, aparece um chip ao lado do título e o formulário passa a avisar que os prazos podem se estender. O formulário só recebe um "sim/não" do banco, nunca os números do time.
+- **Armazenamento** (Configurações → Armazenamento): barras com o espaço usado do banco de dados e dos arquivos (anexos e fotos) em relação aos limites do plano gratuito (500 MB de banco e 1 GB de arquivos), com o detalhe por pasta e por tabela. Os números vêm da função `storage_usage()` do `schema.sql`; se a aba disser que a função não existe, rode o `schema.sql` de novo.
+- **Limpeza automática de anexos**: todo dia, por volta das 03h (06:00 UTC, agendado em `vercel.json`), a função `api/cleanup.js` apaga os anexos das solicitações concluídas há mais de 30 dias. A solicitação continua no REX, com o aviso "Anexo removido automaticamente em …". Para ativar: crie a variável `CRON_SECRET` na Vercel (qualquer texto aleatório com 16+ caracteres) e faça um redeploy. Para testar sem esperar: **Vercel → Project → Settings → Cron Jobs → Run**. A data e a quantidade da última execução aparecem na aba Armazenamento. Se uma solicitação concluída for reaberta depois disso, o anexo não volta.
+- **Formulário**: aceita 1 arquivo de até 20 MB. Quem precisar mandar vários pode juntar em um `.zip`.
 - **Kanban**: arraste cartões entre colunas. Viewer só move as tarefas dele.
 - **Prazos**: calculados pela complexidade (24h, 1 semana, 1 mês) e refeitos quando a complexidade muda.
 

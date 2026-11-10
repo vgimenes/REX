@@ -100,12 +100,14 @@ create table if not exists public.tasks (
   complexity           text not null default 'baixa' check (complexity in ('baixa','media','alta')),
   assignee_id          uuid references public.profiles(id) on delete set null,
   seatalk_group_id     text,
+  attachments_purged_at timestamptz,
   created_at           timestamptz not null default now(),
   due_at               timestamptz not null default now() + interval '24 hours',
   completed_at         timestamptz,
   updated_at           timestamptz not null default now()
 );
 alter table public.tasks add column if not exists seatalk_group_id text;
+alter table public.tasks add column if not exists attachments_purged_at timestamptz;
 
 -- SLA por complexidade: baixa 24h, média 1 semana, alta 1 mês
 create or replace function public.sla_interval(cx text) returns interval
@@ -134,11 +136,11 @@ begin
   if auth.role() = 'authenticated' and not public.is_mgr() then
     if row(new.name, new.requester_email, new.impacted_structures, new.project_type, new.needs_interaction,
            new.report_frequency, new.report_channels, new.description, new.attachments, new.complexity,
-           new.assignee_id, new.seatalk_group_id)
+           new.assignee_id, new.seatalk_group_id, new.attachments_purged_at)
        is distinct from
        row(old.name, old.requester_email, old.impacted_structures, old.project_type, old.needs_interaction,
            old.report_frequency, old.report_channels, old.description, old.attachments, old.complexity,
-           old.assignee_id, old.seatalk_group_id) then
+           old.assignee_id, old.seatalk_group_id, old.attachments_purged_at) then
       raise exception 'Você só pode alterar o status desta tarefa';
     end if;
   end if;
@@ -172,9 +174,13 @@ create table if not exists public.settings (
   max_media   integer not null default 5  check (max_media >= 0),
   max_total   integer not null default 10 check (max_total >= 0),
   burnout     boolean not null default false,
+  last_cleanup_at    timestamptz,
+  last_cleanup_files integer,
   updated_at  timestamptz not null default now(),
   updated_by  text
 );
+alter table public.settings add column if not exists last_cleanup_at timestamptz;
+alter table public.settings add column if not exists last_cleanup_files integer;
 insert into public.settings (id) values (1) on conflict (id) do nothing;
 
 create or replace function public.settings_touch() returns trigger
@@ -182,7 +188,7 @@ language plpgsql as $$
 begin
   new.id := 1;
   new.updated_at := now();
-  new.updated_by := nullif(public.my_email(), '');
+  new.updated_by := coalesce(nullif(public.my_email(), ''), old.updated_by);
   return new;
 end $$;
 
@@ -207,6 +213,31 @@ language sql stable security definer set search_path = public as $$
   from s, o
 $$;
 grant execute on function public.capacity_status() to anon, authenticated;
+
+-- Usada pela aba "Armazenamento" das Configurações (só owner e admin): espaço ocupado
+-- pelo banco (pg_database_size) e pelos arquivos do Storage, por bucket e por tabela.
+create or replace function public.storage_usage() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.is_mgr() then raise exception 'Só owner e admin podem ver o armazenamento'; end if;
+  return jsonb_build_object(
+    'db_bytes',    pg_database_size(current_database()),
+    'files_bytes', coalesce((select sum(coalesce((metadata->>'size')::bigint, 0)) from storage.objects), 0),
+    'files_count', (select count(*) from storage.objects),
+    'buckets', coalesce((
+      select jsonb_agg(jsonb_build_object('bucket', bucket_id, 'bytes', bytes, 'count', n) order by bytes desc)
+      from (select bucket_id, sum(coalesce((metadata->>'size')::bigint, 0)) as bytes, count(*) as n
+            from storage.objects group by bucket_id) b), '[]'::jsonb),
+    'tables', coalesce((
+      select jsonb_agg(jsonb_build_object('table', relname, 'bytes', bytes) order by bytes desc)
+      from (select c.relname, pg_total_relation_size(c.oid) as bytes
+            from pg_class c join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public' and c.relkind = 'r') t), '[]'::jsonb),
+    'measured_at', now()
+  );
+end $$;
+revoke execute on function public.storage_usage() from public, anon;
+grant execute on function public.storage_usage() to authenticated;
 
 -- -------------------------------------------------------------------------------------
 -- 6) Histórico de notificações enviadas pelo SeaTalk (gravado pela função /api/seatalk)

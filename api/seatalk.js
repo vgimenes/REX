@@ -36,8 +36,8 @@ const SEATALK_ERRORS = {
   104: 'A capacidade "Bot" está desligada no app do SeaTalk.',
   105: 'O app do SeaTalk não está online. Publique-o em open.seatalk.io.',
   1000: 'App Secret do SeaTalk inválido. Confira SEATALK_APP_SECRET na Vercel.',
-  3000: 'Nenhum usuário do SeaTalk com este e-mail.',
-  3001: 'Employee code não encontrado no SeaTalk.',
+  3000: 'Nenhum usuário do SeaTalk com este e-mail. Confira se o e-mail do solicitante é o mesmo cadastrado no SeaTalk (um e-mail fictício não funciona).',
+  3001: 'O SeaTalk não encontrou nenhum funcionário com o e-mail do solicitante. Confira se é o mesmo e-mail usado no SeaTalk (um e-mail fictício não funciona).',
   3002: 'O destinatário ainda não assinou o bot. Peça para ele abrir o bot no SeaTalk e clicar em "Subscribe"; depois envie de novo.',
   3003: 'O destinatário não está logado no SeaTalk.',
   4000: 'Tipo de mensagem inválido.'
