@@ -189,6 +189,7 @@ O resultado de cada envio fica em "Notificações enviadas" dentro da solicitaç
 - **Formulário**: aceita 1 arquivo de até 20 MB. Quem precisar mandar vários pode juntar em um `.zip`.
 - **Kanban**: arraste cartões entre colunas. Viewer só move as tarefas dele.
 - **Prazos**: calculados pela complexidade (24h, 1 semana, 1 mês) e refeitos quando a complexidade muda.
+- **Congelar prazo** (botão azul no rodapé da solicitação, owner e admin): para a contagem do SLA, por exemplo enquanto o time espera algo do solicitante. A solicitação mostra o selo "Congelado" no lugar do prazo e não conta como vencida. **Descongelar** (botão laranja) reinicia o prazo do zero a partir daquele momento, com o SLA cheio da complexidade (ex.: 1 semana para média). Concluir uma solicitação congelada encerra o congelamento.
 
 ---
 

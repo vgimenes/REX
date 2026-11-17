@@ -526,6 +526,38 @@ select.pill:hover,select.tag:hover{filter:brightness(1.15)}
 .sheet-nav .tpl small{text-align:left}
 @media (max-width:720px){.tpl-add{width:auto;flex:0 0 auto;margin:0;white-space:nowrap}}
 
+/* ===== congelar prazo ===== */
+:root{--ice:#2f7fd8;--ice-bg:#e3effc;--ice-line:rgba(47,127,216,.38);--thaw:#d9692b;--thaw-bg:#fbe9dc;--thaw-line:rgba(217,105,43,.4)}
+:root[data-theme="dark"]{--ice:#78b4ff;--ice-bg:#1d2d42;--ice-line:rgba(120,180,255,.4);--thaw:#ff9b5e;--thaw-bg:#3d2a1e;--thaw-line:rgba(255,155,94,.42)}
+.d-foot{display:flex;align-items:center;gap:10px}
+.btn.freeze,.btn.thaw{display:inline-flex;align-items:center;gap:7px;font-weight:600;transition:background-color .2s,transform .15s,box-shadow .25s}
+.btn.freeze{background:var(--ice);color:#fff;border:1px solid var(--ice);box-shadow:0 2px 10px rgba(47,127,216,.28)}
+.btn.freeze:hover{filter:brightness(1.07);box-shadow:0 4px 16px rgba(47,127,216,.4)}
+.btn.freeze:hover .i-snow{animation:snowSpin 1s cubic-bezier(.3,1.3,.5,1)}
+.btn.thaw{background:var(--thaw);color:#fff;border:1px solid var(--thaw);box-shadow:0 2px 10px rgba(217,105,43,.28)}
+.btn.thaw:hover{filter:brightness(1.07);box-shadow:0 4px 16px rgba(217,105,43,.4)}
+.btn.thaw svg{animation:sunPulse 2.4s ease-in-out infinite}
+.btn.freeze:active,.btn.thaw:active{transform:scale(.96)}
+@keyframes snowSpin{from{transform:rotate(0)}to{transform:rotate(180deg)}}
+@keyframes sunPulse{0%,100%{transform:scale(1) rotate(0)}50%{transform:scale(1.12) rotate(20deg)}}
+.due.frozen{color:var(--ice);font-weight:600}
+.due svg.i-snow{vertical-align:-3px;margin-right:4px}
+.ice-chip{display:inline-flex;align-items:center;padding:1px 8px 1px 6px;border-radius:999px;background:var(--ice-bg);border:1px solid var(--ice-line);position:relative;overflow:hidden}
+.ice-chip svg{margin-right:4px}
+.ice-chip::after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);transform:translateX(-100%);animation:shimmer 3.2s ease-in-out infinite}
+.ice-chip .i-snow{animation:snowSpin 8s linear infinite}
+.card.is-frozen{border-color:var(--ice-line);background-image:linear-gradient(160deg,var(--ice-bg),transparent 55%)}
+.card.is-frozen .due{display:inline-flex;align-items:center}
+.drawer.frost-in::before,.drawer.thaw-in::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:5;animation:frostWash .9s ease-out forwards}
+.drawer.frost-in::before{background:radial-gradient(circle at 85% 100%,rgba(120,180,255,.45),transparent 65%)}
+.drawer.thaw-in::before{background:radial-gradient(circle at 85% 100%,rgba(255,160,90,.42),transparent 65%)}
+@keyframes frostWash{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.ice-burst{position:fixed;width:0;height:0;pointer-events:none;z-index:90}
+.ice-burst i{position:absolute;width:7px;height:7px;animation:iceOut .95s cubic-bezier(.2,.8,.3,1) forwards;animation-delay:var(--d)}
+.ice-burst.cold i{background:#9cc8ff;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);width:10px;height:10px}
+.ice-burst.warm i{background:#ffb27a;border-radius:50% 50% 50% 0;transform:rotate(-45deg)}
+@keyframes iceOut{0%{opacity:1;transform:translate(0,0) rotate(0) scale(.6)}100%{opacity:0;transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(1)}}
+
 /* ===== armazenamento ===== */
 .sheet-main.swap-in{animation:swapIn .32s cubic-bezier(.2,.9,.3,1)}
 .meter{padding:16px 0;border-top:1px solid var(--line);animation:slideUp .4s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--n,0)*70ms + 60ms)}
@@ -686,6 +718,7 @@ function mockClient(){
   mk('Mapeamento de referências','Planilha','nova','baixa',null,30);
   const settings = [{...DEFAULT_SETTINGS, max_alta:4, updated_at:new Date(now-2*D).toISOString(), updated_by:'fellipe.menezes@shopee.com',
                      last_cleanup_at:new Date(now-9*H).toISOString(), last_cleanup_files:2}];
+  tasks.filter(t => t.status === 'em_validacao').slice(0, 1).forEach(t => { t.frozen_at = new Date(now - 2*D).toISOString(); });
   tasks.filter(t => t.status === 'concluida').slice(-1).forEach(t => { t.attachments = []; t.attachments_purged_at = new Date(now-9*H).toISOString(); });
   const notifications = [
     {id:crypto.randomUUID(), task_id:tasks[4].id, template:'atualizacao', channel:'dm', recipient:tasks[4].requester_email, status:'sent', sent_by:'victor.gsantana@shopee.com',
@@ -728,7 +761,10 @@ function mockClient(){
         hit.forEach(r => {
           if(tbl === 'tasks'){
             const old = {...r}; Object.assign(r, q.patch);
-            if(r.complexity !== old.complexity) r.due_at = new Date(new Date(r.created_at).getTime() + SLA_MS[r.complexity]).toISOString();
+            if(r.frozen_at && !old.frozen_at) r.frozen_at = new Date().toISOString();
+            if(!r.frozen_at && old.frozen_at && r.status !== 'concluida'){ r.sla_started_at = new Date().toISOString(); r.due_at = new Date(Date.now() + SLA_MS[r.complexity]).toISOString(); }
+            else if(r.complexity !== old.complexity) r.due_at = new Date(new Date(r.sla_started_at || r.created_at).getTime() + SLA_MS[r.complexity]).toISOString();
+            if(r.status === 'concluida') r.frozen_at = null;
             if(r.status === 'concluida' && old.status !== 'concluida') r.completed_at = new Date().toISOString();
             if(r.status !== 'concluida') r.completed_at = null;
             r.updated_at = new Date().toISOString();
@@ -884,7 +920,8 @@ function dur(ms){
   return Math.floor(h/24) + 'd';
 }
 function slaInfo(t){
-  const due = new Date(t.due_at).getTime(), created = new Date(t.created_at).getTime();
+  const due = new Date(t.due_at).getTime(), created = new Date(t.sla_started_at || t.created_at).getTime();
+  if(t.frozen_at && t.status !== 'concluida') return {cls:'frozen', text:'congelado', title:'Prazo congelado desde ' + fmtDT(t.frozen_at)};
   if(t.status === 'concluida'){
     const done = new Date(t.completed_at || t.updated_at).getTime();
     return done <= due ? {cls:'', text:'no prazo', title:'Concluída dentro do prazo'}
@@ -923,6 +960,8 @@ I.x = ic24('<path d="M18 6L6 18M6 6l12 12"/>', '', 16);
 I.flame = ic24('<path d="M12 22c4.4 0 7-2.8 7-7 0-3-2-5.5-3.5-7.5-.4 1.6-1.3 2.6-2.5 3C13 8 12 5.3 11 2c-3.5 2.5-6 6.6-6 10.5C5 18 7.6 22 12 22z"/><path d="M12 22c-2 0-3.2-1.4-3.2-3.2 0-1.5.9-2.7 1.9-3.8.4 1 1 1.6 1.8 1.9.6-1 .5-2.3.3-3.4 1.6 1.2 2.7 2.8 2.7 4.6 0 2.1-1.4 3.9-3.5 3.9z"/>', 'i-flame', 16);
 I.hash = ic24('<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/>', 'ic', 14);
 I.plus = ic24('<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>', '', 14);
+I.snow = ic24('<line x1="12" y1="2" x2="12" y2="22"/><line x1="4.9" y1="7" x2="19.1" y2="17"/><line x1="4.9" y1="17" x2="19.1" y2="7"/><polyline points="9.5 3.5 12 6 14.5 3.5"/><polyline points="9.5 20.5 12 18 14.5 20.5"/><polyline points="3.6 10.2 6.8 9.4 6 6.3"/><polyline points="20.4 13.8 17.2 14.6 18 17.7"/><polyline points="3.6 13.8 6.8 14.6 6 17.7"/><polyline points="20.4 10.2 17.2 9.4 18 6.3"/>', 'i-snow', 15);
+I.thaw = ic24('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>', 'i-thaw', 15);
 I.disk = ic24('<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>', '', 15);
 I.refresh = ic24('<polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>', 'i-refresh', 14);
 I.sliders = ic24('<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>', '', 15);
@@ -1179,7 +1218,15 @@ async function patchTask(id, patch){
   if('status' in patch) S.flash = {id, t0: Date.now()};
   const bf = ['status','complexity','assignee_id'].find(k => k in patch);
   if(bf) S.bump = {id, field:bf, t0:Date.now()};
-  if('complexity' in patch) t.due_at = new Date(new Date(t.created_at).getTime() + SLA_MS[t.complexity]).toISOString();
+  if('frozen_at' in patch){
+    if(patch.frozen_at && !before.frozen_at) t.frozen_at = new Date().toISOString();
+    if(!patch.frozen_at && before.frozen_at){   // descongelou: o prazo reinicia
+      t.sla_started_at = new Date().toISOString();
+      t.due_at = new Date(Date.now() + SLA_MS[t.complexity]).toISOString();
+    }
+  }
+  if('complexity' in patch && !('frozen_at' in patch)) t.due_at = new Date(new Date(t.sla_started_at || t.created_at).getTime() + SLA_MS[t.complexity]).toISOString();
+  if(patch.status === 'concluida') t.frozen_at = null;
   if('status' in patch) t.completed_at = patch.status === 'concluida' ? new Date().toISOString() : null;
   render();
   const {data, error} = await sb.from('tasks').update(patch).eq('id', id).select().single();
@@ -1370,7 +1417,7 @@ function listView(){
         <td class="nm"><span class="num">#${t.number}</span>${esc(t.name)}</td>
         <td>${statusCtl(t)}</td>
         <td>${assigneeCtl(t)}</td>
-        <td><span class="due ${s.cls}" title="${esc(s.title)}">${fmtDT(t.due_at)}</span><span class="rel">${esc(s.text)}</span></td>
+        <td>${dueCell(t, s)}</td>
         <td>${cxCtl(t)}</td>
         <td>${esc(t.project_type)}</td>
         <td class="mut">${fmtDT(t.created_at)}</td>
@@ -1394,13 +1441,45 @@ function kanbanView(){
   }).join('')}</div>`;
 }
 
+/* congelar / descongelar o prazo (owner e admin) */
+const freezeBtn = t => t.frozen_at
+  ? `<button class="btn thaw" data-action="toggle-freeze" data-id="${t.id}" title="O prazo reinicia do zero ao descongelar">${I.thaw}<span>Descongelar prazo</span></button>`
+  : `<button class="btn freeze" data-action="toggle-freeze" data-id="${t.id}" title="Para a contagem do prazo até descongelar">${I.snow}<span>Congelar prazo</span></button>`;
+async function toggleFreeze(id, btn){
+  const t = byId(id); if(!t || t.status === 'concluida') return;
+  const freezing = !t.frozen_at;
+  if(btn && !REDUCE) iceBurst(btn, freezing);
+  await patchTask(id, {frozen_at: freezing ? new Date().toISOString() : null});
+  const now = byId(id); if(!now) return;
+  if(freezing && now.frozen_at) toast('Prazo congelado. A contagem fica parada até descongelar.');
+  if(!freezing && !now.frozen_at) toast('Prazo reiniciado: novo prazo em ' + fmtDT(now.due_at) + '.');
+  const d = $('#drawer .drawer'); if(d && !REDUCE){ d.classList.remove('frost-in', 'thaw-in'); void d.offsetWidth; d.classList.add(freezing ? 'frost-in' : 'thaw-in'); }
+}
+/* partículas: cristais de gelo ao congelar, gotas ao descongelar */
+function iceBurst(btn, freezing){
+  const r = btn.getBoundingClientRect(), box = document.createElement('div');
+  box.className = 'ice-burst ' + (freezing ? 'cold' : 'warm');
+  box.style.left = (r.left + r.width / 2) + 'px'; box.style.top = (r.top + r.height / 2) + 'px';
+  box.innerHTML = Array.from({length: 14}, (_, i) => {
+    const a = (i / 14) * Math.PI * 2 + Math.random() * .4, d = 40 + Math.random() * 50;
+    return `<i style="--x:${(Math.cos(a) * d).toFixed(0)}px;--y:${(Math.sin(a) * d - (freezing ? 10 : -30)).toFixed(0)}px;--r:${Math.round(Math.random() * 360)}deg;--d:${Math.round(Math.random() * 90)}ms"></i>`;
+  }).join('');
+  document.body.appendChild(box); setTimeout(() => box.remove(), 1100);
+}
+
+/* célula de prazo: data + tempo restante, ou o selo de congelado */
+function dueCell(t, s){
+  if(s.cls === 'frozen') return `<span class="due frozen ice-chip" title="${esc(s.title)}">${I.snow}Congelado</span><span class="rel">desde ${esc(fmtDT(t.frozen_at))}</span>`;
+  return `<span class="due ${s.cls}" title="${esc(s.title)}">${fmtDT(t.due_at)}</span><span class="rel">${esc(s.text)}</span>`;
+}
+
 function card(t, i=0){
   const a = prof(t.assignee_id), s = slaInfo(t), fx = aAttr(t, i);
-  return `<article class="card c-${t.status}${fx.cls}" style="${fx.st}" ${canMove(t)?'draggable="true"':''} data-action="open" data-id="${t.id}">
+  return `<article class="card c-${t.status}${fx.cls}${t.frozen_at && t.status !== 'concluida' ? ' is-frozen' : ''}" style="${fx.st}" ${canMove(t)?'draggable="true"':''} data-action="open" data-id="${t.id}">
     <div class="card-t">${I.check(t.status==='concluida',18)}<span>${esc(t.name)}</span></div>
     <div class="card-m">${a ? `${avatar(a,'sm')}${esc(a.name)}` : '<span class="mut">Sem responsável</span>'}</div>
     <div class="card-f"><span class="tag cx-${t.complexity}">${cxLabel(t.complexity)}</span>
-      <span class="due ${s.cls}" title="${esc(fmtDT(t.due_at))}">${esc(s.text)}</span></div>
+      <span class="due ${s.cls}" title="${esc(s.cls === 'frozen' ? s.title : fmtDT(t.due_at))}">${s.cls === 'frozen' ? I.snow : ''}${esc(s.text)}</span></div>
   </article>`;
 }
 
@@ -1440,7 +1519,7 @@ function renderDrawer(){
       ${prop(I.status,'Status',statusCtl(t))}
       ${prop(I.person,'Responsável',assigneeCtl(t))}
       ${prop(I.tag,'Complexidade',cxCtl(t))}
-      ${prop(I.cal,'Prazo',`<span class="due ${s.cls}">${fmtDT(t.due_at)}</span><span class="rel">${esc(s.text)}</span>`)}
+      ${prop(I.cal,'Prazo',dueCell(t, s))}
       ${prop(I.type,'Tipo',esc(t.project_type))}
       ${prop(I.text,'Estruturas impactadas',esc(t.impacted_structures))}
       ${prop(I.text,'Interação com outros times',t.needs_interaction?'Sim':'Não')}
@@ -1455,7 +1534,8 @@ function renderDrawer(){
       <div class="h3-row"><h3>Notificações enviadas</h3><span class="spacer"></span>${isMgr() ? `<button class="btn sm" data-action="notify">${I.bell} Notificar</button>` : ''}</div>
       <div id="notifs">${S.notifs[t.id] ? notifsHTML(S.notifs[t.id]) : '<span class="muted">Carregando...</span>'}</div>`}
     </div>
-    ${(isMgr() && !S.editing) ? `<div class="d-foot"><button class="btn danger" data-action="delete-task" data-id="${t.id}">Excluir solicitação</button></div>` : ''}
+    ${(isMgr() && !S.editing) ? `<div class="d-foot"><button class="btn danger" data-action="delete-task" data-id="${t.id}">Excluir solicitação</button>
+      <span class="spacer"></span>${t.status !== 'concluida' ? freezeBtn(t) : ''}</div>` : ''}
   </aside>`;
   const fresh = S.drawerIn || !S.notifs[t.id];
   S.drawerIn = false;
@@ -1570,6 +1650,7 @@ document.addEventListener('click', async e => {
   else if(act === 'cancel-edit'){ S.editing = false; renderDrawer(); }
   else if(act === 'close-modal'){ closeModal(); }
   else if(act === 'settings'){ openSettings(); }
+  else if(act === 'toggle-freeze'){ toggleFreeze(id, a); }
   else if(act === 'storage-refresh'){ loadStorage(); }
   else if(act === 'google'){ loginGoogle(a); }
   else if(act === 'toggle-burnout'){ changeSetting({burnout: !S.settings.burnout}); }
@@ -1722,7 +1803,7 @@ function renderStats(){
   box.hidden = S.view === 'equipe';
   const now = Date.now(), cut = now - 30*86400e3;
   const open = S.tasks.filter(t => t.status !== 'concluida');
-  const late = open.filter(t => new Date(t.due_at).getTime() < now);
+  const late = open.filter(t => !t.frozen_at && new Date(t.due_at).getTime() < now);
   const done = S.tasks.filter(t => t.status === 'concluida' && new Date(t.completed_at || t.updated_at).getTime() > cut);
   const ontime = done.filter(t => new Date(t.completed_at || t.updated_at) <= new Date(t.due_at));
   const pct = done.length ? Math.round(ontime.length / done.length * 100) : 0;
@@ -1923,7 +2004,7 @@ const allTemplates = () => TEMPLATES.concat((S.templates || []).map(x => ({id:x.
 const curTpl = () => allTemplates().find(x => x.id === (S.ntf && S.ntf.tpl)) || TEMPLATES[0];
 function fillTemplate(tpl, t){
   const a = prof(t.assignee_id);
-  const vars = {numero:t.number, nome:t.name, status:stLabel(t.status), prazo:fmtDT(t.due_at), responsavel: a ? a.name : 'a definir',
+  const vars = {numero:t.number, nome:t.name, status:stLabel(t.status), prazo: (t.frozen_at && t.status !== 'concluida') ? 'congelado no momento' : fmtDT(t.due_at), responsavel: a ? a.name : 'a definir',
     complexidade:cxLabel(t.complexity), solicitante:t.requester_email, link_agenda:MEETING_URL, remetente: S.me ? S.me.name : TEAM, time:TEAM};
   return tpl.text.replace(/\{(\w+)\}/g, (m, k) => k in vars ? String(vars[k]) : m);
 }
